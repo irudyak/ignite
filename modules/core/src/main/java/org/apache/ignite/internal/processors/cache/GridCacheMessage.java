@@ -357,10 +357,9 @@ public abstract class GridCacheMessage implements Message {
             for (IgniteTxEntry e : txEntries) {
                 e.marshal(ctx, transferExpiry);
 
-                GridCacheContext cctx = ctx.cacheContext(e.cacheId());
+                GridCacheContext cctx = e.context();
 
                 if (cctx.deploymentEnabled()) {
-
                     if (e.key() != null)
                         prepareObject(e.key().value(cctx.cacheObjectContext(), false), cctx);
 

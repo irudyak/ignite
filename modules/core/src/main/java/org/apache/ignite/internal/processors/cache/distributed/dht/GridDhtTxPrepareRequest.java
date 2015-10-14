@@ -284,16 +284,13 @@ public class GridDhtTxPrepareRequest extends GridDistributedTxPrepareRequest {
 
             ownedVals = owned.values();
 
-            for (IgniteTxKey key: ownedKeys)
-                key.prepareMarshal(ctx.cacheContext(key.cacheId()));
+            for (IgniteTxKey key: ownedKeys) {
+                GridCacheContext cctx = ctx.cacheContext(key.cacheId());
 
-            if (ctx.deploymentEnabled()) {
-                for (IgniteTxKey k : owned.keySet()) {
-                    GridCacheContext cctx = ctx.cacheContext(k.cacheId());
+                key.prepareMarshal(cctx);
 
-                    if (cctx.deploymentEnabled())
-                        prepareObject(k, cctx);
-                }
+                if (ctx.deploymentEnabled() && cctx.deploymentEnabled())
+                    prepareObject(key, cctx);
             }
         }
 
