@@ -15,21 +15,20 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Messaging
+namespace Apache.Ignite.Core.Events
 {
-    using System;
-
     /// <summary>
-    /// Represents messaging filter predicate.
+    /// Represents an event listener.
     /// </summary>
-    public interface IMessageFilter<in T>
+    /// <typeparam name="T">Event type.</typeparam>
+    public interface IEventListener<in T> where T : IEvent
     {
         /// <summary>
-        /// Returns a value indicating whether provided message and node id satisfy this predicate.
+        /// Invoked when event occurs.
         /// </summary>
-        /// <param name="nodeId">Node identifier.</param>
-        /// <param name="message">Message.</param>
-        /// <returns>Value indicating whether provided message and node id satisfy this predicate.</returns>
-        bool Invoke(Guid nodeId, T message);
+        /// <param name="evt">Event.</param>
+        /// <returns>Value indicating whether this listener should be kept subscribed. 
+        /// Returning false unsubscribes this listener from future notifications.</returns>
+        bool Invoke(T evt);
     }
 }
