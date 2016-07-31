@@ -20,6 +20,8 @@ package org.apache.ignite.cache.store.cassandra;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
+
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,6 +32,7 @@ import java.util.concurrent.Future;
 import javax.cache.Cache;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriterException;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.store.CacheStore;
@@ -74,6 +77,10 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
     /** Controller component responsible for serialization logic. */
     private PersistenceController controller;
 
+    private static volatile Integer COUNTER = 0;
+
+    private String storeName;
+
     /**
      * Store constructor.
      *
@@ -85,6 +92,10 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
         this.dataSrc = dataSrc;
         this.controller = new PersistenceController(settings);
         this.maxPoolSize = maxPoolSize;
+
+        synchronized (COUNTER) {
+            storeName = "store_" + (++COUNTER);
+        }
     }
 
     /** {@inheritDoc} */
@@ -127,6 +138,8 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
 
     /** {@inheritDoc} */
     @Override public void sessionEnd(boolean commit) throws CacheWriterException {
+        System.out.println(ManagementFactory.getRuntimeMXBean().getName() + " [SESSION-END] [" + storeName + "]" + storeSes.cacheName() + ", " + (commit ? "COMMIT" : "ROLLBACK"));
+
         if (storeSes == null || storeSes.transaction() == null)
             return;
 
@@ -141,10 +154,12 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
         if (key == null)
             return null;
 
+        V value = null;
+
         CassandraSession ses = getCassandraSession();
 
         try {
-            return ses.execute(new ExecutionAssistant<V>() {
+            return value = ses.execute(new ExecutionAssistant<V>() {
                 @Override public boolean tableExistenceRequired() {
                     return false;
                 }
@@ -171,6 +186,7 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
             });
         }
         finally {
+            System.out.println(ManagementFactory.getRuntimeMXBean().getName() + " [LOAD] [" + storeName + "]" + storeSes.cacheName() + ", " + key + "=" + value);
             closeCassandraSession(ses);
         }
     }
@@ -181,10 +197,12 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
         if (keys == null || !keys.iterator().hasNext())
             return new HashMap<>();
 
+        Map<K, V> result = null;
+
         CassandraSession ses = getCassandraSession();
 
         try {
-            return ses.execute(new GenericBatchExecutionAssistant<Map<K, V>, K>() {
+            return result = ses.execute(new GenericBatchExecutionAssistant<Map<K, V>, K>() {
                 private Map<K, V> data = new HashMap<>();
 
                 /** {@inheritDoc} */
@@ -219,6 +237,11 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
             }, keys);
         }
         finally {
+            for (K key : keys) {
+                V value = result == null ? null : result.get(key);
+                System.out.println(ManagementFactory.getRuntimeMXBean().getName() + " [LOAD-ALL] [" + storeName + "]" + storeSes.cacheName() + ", " + key + "=" + value);
+            }
+
             closeCassandraSession(ses);
         }
     }
@@ -227,6 +250,8 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
     @Override public void write(final Cache.Entry<? extends K, ? extends V> entry) throws CacheWriterException {
         if (entry == null || entry.getKey() == null)
             return;
+
+        System.out.println(ManagementFactory.getRuntimeMXBean().getName() + " [WRITE] [" + storeName + "]" + storeSes.cacheName() + ", " + entry.getKey() + "=" + entry.getValue());
 
         CassandraSession ses = getCassandraSession();
 
@@ -266,6 +291,9 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
     @Override public void writeAll(Collection<Cache.Entry<? extends K, ? extends V>> entries) throws CacheWriterException {
         if (entries == null || entries.isEmpty())
             return;
+
+        for (Cache.Entry entry : entries)
+            System.out.println(ManagementFactory.getRuntimeMXBean().getName() + " [WRITE-ALL] [" + storeName + "]" + storeSes.cacheName() + ", " + entry.getKey() + "=" + entry.getValue());
 
         CassandraSession ses = getCassandraSession();
 
