@@ -66,7 +66,7 @@ public class TransactionsTestServer {
         if (args.length > 0 && args[0].equals("1"))
             setup();
 
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/primitive/transactions/ignite-server-config.xml")) {
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/primitive/transactions/ignite-server-config-1.xml")) {
             while (true) {
                 System.out.println(ManagementFactory.getRuntimeMXBean().getName());
 

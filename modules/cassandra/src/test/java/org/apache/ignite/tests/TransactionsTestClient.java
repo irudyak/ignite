@@ -32,7 +32,7 @@ import org.apache.log4j.Logger;
  */
 public class TransactionsTestClient {
     public static void main(String[] args) {
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/primitive/transactions/ignite-client-config.xml")) {
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/primitive/transactions/ignite-client-config-1.xml")) {
 
             CacheConfiguration g;
             IgniteCache<Long, Long> longCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Long>("cache1"));
