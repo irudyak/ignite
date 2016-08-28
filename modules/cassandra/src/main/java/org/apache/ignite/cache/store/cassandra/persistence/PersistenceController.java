@@ -111,7 +111,7 @@ public class PersistenceController {
             questionsList.append("?");
         }
 
-        writeStatement = "insert into " + persistenceSettings.getKeyspace() + "." + persistenceSettings.getTable() + " (" +
+        writeStatement = "insert into \"" + persistenceSettings.getKeyspace() + "\".\"" + persistenceSettings.getTable() + "\" (" +
             colsList.toString() + ") values (" + questionsList.toString() + ")";
 
         if (persistenceSettings.getTTL() != null)
@@ -144,9 +144,9 @@ public class PersistenceController {
 
         statement.append(";");
 
-        delStatement = "delete from " +
-            persistenceSettings.getKeyspace() + "." +
-            persistenceSettings.getTable() + " where " +
+        delStatement = "delete from \"" +
+            persistenceSettings.getKeyspace() + "\".\"" +
+            persistenceSettings.getTable() + "\" where " +
             statement.toString();
 
         return delStatement;
@@ -190,10 +190,10 @@ public class PersistenceController {
 
         StringBuilder statement = new StringBuilder();
 
-        statement.append(" from ");
+        statement.append(" from \"");
         statement.append(persistenceSettings.getKeyspace());
-        statement.append(".").append(persistenceSettings.getTable());
-        statement.append(" where ");
+        statement.append("\".\"").append(persistenceSettings.getTable());
+        statement.append("\" where ");
 
         for (int i = 0; i < keyCols.size(); i++) {
             if (i > 0)

@@ -24,7 +24,7 @@
         http://www.springframework.org/schema/beans/spring-beans.xsd">
 
     <!-- Cassandra connection settings -->
-    <import resource="classpath:org/apache/ignite/tests/cassandra/summit2016-connection-settings.xml" />
+    <import resource="classpath:org/apache/ignite/tests/cassandra/connection-settings.xml" />
 
     <!-- Persistence settings for 'product' cache -->
     <bean id="product_persistence_settings" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
@@ -38,6 +38,7 @@
 
     <!-- Ignite configuration -->
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="clientMode" value="true"/>
         <property name="cacheConfiguration">
             <list>
                 <!-- Configuring persistence for "product" cache -->
@@ -80,6 +81,7 @@
                                         </bean>
                                     </list>
                                 </property>
+
                             </bean>
                         </list>
                     </property>

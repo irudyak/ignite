@@ -21,6 +21,9 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
@@ -37,7 +40,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
 
+import javax.cache.Cache;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,8 +56,6 @@ public class CassandraSummit2016Test {
     /** */
     private static final Logger LOGGER = Logger.getLogger(CassandraSummit2016Test.class.getName());
 
-    /** */
-    @BeforeClass
     public static void setUpClass() {
         if (CassandraHelper.useEmbeddedCassandra()) {
             try {
@@ -72,8 +78,6 @@ public class CassandraSummit2016Test {
         LOGGER.info("Start tests execution");
     }
 
-    /** */
-    @AfterClass
     public static void tearDownClass() {
         try {
             CassandraHelper.dropTestKeyspaces();
@@ -94,60 +98,83 @@ public class CassandraSummit2016Test {
 
     /** */
     @Test
-    public void pojoStrategyTest() {
-        Ignition.stopAll(true);
+    public void serverTest() {
+        setUpClass();
 
         try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-config.xml")) {
             IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
             IgniteCache<Long, Order> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Order>("order"));
 
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 10; i++) {
                 Product prod = TestsHelper.generateRandomProduct();
                 productCache.put(prod.getId(), prod);
+            }
+
+            for (int i = 0; i < 50; i++) {
+                Product prod = productCache.randomEntry().getValue();
+                Order order = TestsHelper.generateRandomOrder(prod, i * 1000);
+                orderCache.put(order.getId(), order);
+            }
+
+            while (true) {
+                try {
+                    Thread.sleep(10000);
+                    System.out.println("SERVER IS RUNNING");
+                } catch (Throwable ignored) {
+                }
             }
         }
     }
 
     /** */
     @Test
-    public void loadCacheTest() {
-        Ignition.stopAll(true);
+    public void clientTest() {
+        try {
+            // Register JDBC driver.
+            Class.forName("org.apache.ignite.IgniteJdbcDriver");
 
-        LOGGER.info("Running loadCache test");
+            // Open JDBC connection (cache name is not specified, which means that we use default cache).
+            Connection conn = DriverManager.getConnection("jdbc:ignite:cfg://file:///D:/Projects/ignite/modules/cassandra/src/test/resources/org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml");
 
-        LOGGER.info("Filling Cassandra table with test data");
+            // Query names of all people.
+            ResultSet rs = conn.createStatement().executeQuery("select * from Product");
 
-        CacheStore store = CacheStoreHelper.createCacheStore("personTypes",
-            new ClassPathResource("org/apache/ignite/tests/persistence/pojo/persistence-settings-3.xml"),
-            CassandraHelper.getAdminDataSrc());
+            while (rs.next()) {
+                String str = rs.getString(1);
+                System.out.println(str);
+            }
+        }
+        catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
 
-        Collection<CacheEntryImpl<PersonId, Person>> entries = TestsHelper.generatePersonIdsPersonsEntries();
+    @Test
+    public void clientTest1() {
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
+            IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
+            IgniteCache<Long, Order> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Order>("order"));
 
-        store.writeAll(entries);
+            SqlQuery sql = new SqlQuery(Product.class, "price > 50");
 
-        LOGGER.info("Cassandra table filled with test data");
-
-        LOGGER.info("Running loadCache test");
-
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/pojo/ignite-config.xml")) {
-            IgniteCache<PersonId, Person> personCache3 = ignite.getOrCreateCache(new CacheConfiguration<PersonId, Person>("cache3"));
-            int size = personCache3.size(CachePeekMode.ALL);
-
-            LOGGER.info("Initial cache size " + size);
-
-            LOGGER.info("Loading cache data from Cassandra table");
-
-            personCache3.loadCache(null, new String[] {"select * from test1.pojo_test3 limit 3"});
-
-            size = personCache3.size(CachePeekMode.ALL);
-            if (size != 3) {
-                throw new RuntimeException("Cache data was incorrectly loaded from Cassandra. " +
-                    "Expected number of records is 3, but loaded number of records is " + size);
+            try (QueryCursor<Cache.Entry<Long, Product>> cursor = productCache.query(sql)) {
+                for (Cache.Entry<Long, Product> e : cursor)
+                    System.out.println(e.getValue().toString());
             }
 
-            LOGGER.info("Cache data loaded from Cassandra table");
+            SqlFieldsQuery sql1 = new SqlFieldsQuery("select id, type, title, description, price from Product where price > 100");
+
+            // Iterate over the result set.
+            try (QueryCursor<List<?>> cursor = productCache.query(sql1)) {
+                for (List<?> row : cursor)
+                    System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2) + ", " + row.get(3) + ", " + row.get(4));
+            }
+
+        }
+        catch (Throwable e) {
+            e.printStackTrace();
         }
 
-        LOGGER.info("loadCache test passed");
     }
+
 }

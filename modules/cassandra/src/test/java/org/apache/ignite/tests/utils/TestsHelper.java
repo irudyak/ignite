@@ -355,6 +355,11 @@ public class TestsHelper {
         return new Product(Long.parseLong(randomNumber(10)), randomString(3), randomString(10), randomString(20), price);
     }
 
+    public static Order generateRandomOrder(Product product, long id) {
+        Calendar cl = Calendar.getInstance();
+        return new Order(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
+    }
+
     public static Order generateRandomOrder(Product product, long id,
                                             int year, int month, int day, int hour) {
         Calendar cl = Calendar.getInstance();

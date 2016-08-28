@@ -20,6 +20,11 @@ public class Product {
         this.price = price;
     }
 
+    @Override
+    public String toString() {
+        return id + ", " + price + ", " + type + ", " + title + ", " + description;
+    }
+
     public void setId(long id) {
         this.id = id;
     }
@@ -42,7 +47,7 @@ public class Product {
         this.title = title;
     }
 
-    @QuerySqlField
+    @QuerySqlField(index = true)
     public String getTitle() {
         return title;
     }
@@ -56,6 +61,7 @@ public class Product {
         return description;
     }
 
+    @QuerySqlField(index = true)
     public void setPrice(float price) {
         this.price = price;
     }
