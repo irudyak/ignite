@@ -17,18 +17,14 @@
 
 package org.apache.ignite.tests.utils;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.ResourceBundle;
+import java.util.*;
+
 import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
 import org.apache.ignite.tests.load.Generator;
+import org.apache.ignite.tests.pojos.Order;
 import org.apache.ignite.tests.pojos.Person;
 import org.apache.ignite.tests.pojos.PersonId;
+import org.apache.ignite.tests.pojos.Product;
 import org.springframework.core.io.ClassPathResource;
 
 /**
@@ -351,6 +347,23 @@ public class TestsHelper {
         }
 
         return true;
+    }
+
+
+    public static Product generateRandomProduct() {
+        float price = Float.parseFloat((5 + RANDOM.nextInt(500)) + "." + randomNumber(2));
+        return new Product(Long.parseLong(randomNumber(10)), randomString(3), randomString(10), randomString(20), price);
+    }
+
+    public static Order generateRandomOrder(Product product, long id,
+                                            int year, int month, int day, int hour) {
+        Calendar cl = Calendar.getInstance();
+        int minute = cl.get(Calendar.MINUTE);
+        int second = cl.get(Calendar.SECOND);
+
+        cl.set(year, month, day, hour, minute, second);
+
+        return new Order(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
     }
 
     /** */
