@@ -61,7 +61,6 @@ public class Product {
         return description;
     }
 
-    @QuerySqlField(index = true)
     public void setPrice(float price) {
         this.price = price;
     }

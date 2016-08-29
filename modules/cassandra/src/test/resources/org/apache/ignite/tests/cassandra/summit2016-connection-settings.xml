@@ -31,14 +31,14 @@
     <bean id="cassandraAdminDataSource" class="org.apache.ignite.cache.store.cassandra.datasource.DataSource">
         <property name="credentials" ref="cassandraAdminCredentials"/>
         <property name="contactPoints" ref="contactPoints"/>
-        <property name="readConsistency" value="QUORUM"/>
-        <property name="writeConsistency" value="QUORUM"/>
+        <property name="readConsistency" value="ONE"/>
+        <property name="writeConsistency" value="ONE"/>
     </bean>
 
     <bean id="cassandraRegularDataSource" class="org.apache.ignite.cache.store.cassandra.datasource.DataSource">
         <property name="credentials" ref="cassandraRegularCredentials"/>
         <property name="contactPoints" ref="contactPoints"/>
-        <property name="readConsistency" value="QUORUM"/>
-        <property name="writeConsistency" value="QUORUM"/>
+        <property name="readConsistency" value="ONE"/>
+        <property name="writeConsistency" value="ONE"/>
     </bean>
 </beans>

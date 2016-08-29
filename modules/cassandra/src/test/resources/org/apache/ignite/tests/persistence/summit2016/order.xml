@@ -28,7 +28,7 @@
 
     <keyPersistence class="java.lang.Long" strategy="PRIMITIVE" column="id"/>
 
-    <valuePersistence class="org.apache.ignite.tests.pojos.Order" strategy="POJO">
+    <valuePersistence class="org.apache.ignite.tests.pojos.ProductOrder" strategy="POJO">
         <field name="productId"/>
         <field name="date" />
         <field name="amount" />

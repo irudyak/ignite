@@ -20,33 +20,22 @@ package org.apache.ignite.tests;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
-import org.apache.ignite.tests.pojos.Order;
-import org.apache.ignite.tests.pojos.Person;
-import org.apache.ignite.tests.pojos.PersonId;
+import org.apache.ignite.tests.pojos.ProductOrder;
 import org.apache.ignite.tests.pojos.Product;
-import org.apache.ignite.tests.utils.CacheStoreHelper;
 import org.apache.ignite.tests.utils.CassandraHelper;
 import org.apache.ignite.tests.utils.TestsHelper;
 import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.springframework.core.io.ClassPathResource;
 
 import javax.cache.Cache;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Unit tests for Ignite caches which utilizing {@link org.apache.ignite.cache.store.cassandra.CassandraCacheStore}
@@ -99,20 +88,27 @@ public class CassandraSummit2016Test {
     /** */
     @Test
     public void serverTest() {
+        Random rand = new Random(System.currentTimeMillis());
+
         setUpClass();
 
         try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-config.xml")) {
             IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
-            IgniteCache<Long, Order> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Order>("order"));
+            IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
 
-            for (int i = 0; i < 10; i++) {
+            Map<Integer, Product> products = new HashMap<>();
+
+            for (int i = 0; i < 20; i++) {
                 Product prod = TestsHelper.generateRandomProduct();
                 productCache.put(prod.getId(), prod);
+
+                int index = products.size();
+                products.put(index, prod);
             }
 
-            for (int i = 0; i < 50; i++) {
-                Product prod = productCache.randomEntry().getValue();
-                Order order = TestsHelper.generateRandomOrder(prod, i * 1000);
+            for (int i = 0; i < 100000; i++) {
+                Product prod = products.get(rand.nextInt(products.size()));
+                ProductOrder order = TestsHelper.generateRandomOrder(prod, i * 1000);
                 orderCache.put(order.getId(), order);
             }
 
@@ -153,7 +149,7 @@ public class CassandraSummit2016Test {
     public void clientTest1() {
         try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
             IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
-            IgniteCache<Long, Order> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Order>("order"));
+            IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
 
             SqlQuery sql = new SqlQuery(Product.class, "price > 50");
 
@@ -162,19 +158,41 @@ public class CassandraSummit2016Test {
                     System.out.println(e.getValue().toString());
             }
 
-            SqlFieldsQuery sql1 = new SqlFieldsQuery("select id, type, title, description, price from Product where price > 100");
+            System.out.println("========================================================================");
 
-            // Iterate over the result set.
+            SqlFieldsQuery sql1 = new SqlFieldsQuery("select id, type, title, description, price from Product where price > 0");
+
             try (QueryCursor<List<?>> cursor = productCache.query(sql1)) {
                 for (List<?> row : cursor)
                     System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2) + ", " + row.get(3) + ", " + row.get(4));
             }
 
+            System.out.println("========================================================================");
+
+            SqlFieldsQuery sql2 = new SqlFieldsQuery("select p.id, o.id, o.amount, o.price, o.date " +
+                    "from Product as p, \"order\".ProductOrder as o where p.id = o.productId order by p.id");
+
+            sql2.setDistributedJoins(true);
+
+            try (QueryCursor<List<?>> cursor = productCache.query(sql2)) {
+                for (List<?> row : cursor)
+                    System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2) + ", " + row.get(3) + ", " + row.get(4));
+            }
+
+            System.out.println("========================================================================");
+
+            SqlFieldsQuery sql3 = new SqlFieldsQuery("select p.id, sum(o.amount), sum(o.price) " +
+                    "from Product as p, \"order\".ProductOrder as o where p.id = o.productId group by p.id order by 3 desc limit 2");
+
+            sql3.setDistributedJoins(true);
+
+            try (QueryCursor<List<?>> cursor = productCache.query(sql3)) {
+                for (List<?> row : cursor)
+                    System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2));
+            }
         }
         catch (Throwable e) {
             e.printStackTrace();
         }
-
     }
-
 }

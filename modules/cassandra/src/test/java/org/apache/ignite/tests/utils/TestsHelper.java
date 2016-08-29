@@ -21,7 +21,7 @@ import java.util.*;
 
 import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
 import org.apache.ignite.tests.load.Generator;
-import org.apache.ignite.tests.pojos.Order;
+import org.apache.ignite.tests.pojos.ProductOrder;
 import org.apache.ignite.tests.pojos.Person;
 import org.apache.ignite.tests.pojos.PersonId;
 import org.apache.ignite.tests.pojos.Product;
@@ -351,24 +351,24 @@ public class TestsHelper {
 
 
     public static Product generateRandomProduct() {
-        float price = Float.parseFloat((5 + RANDOM.nextInt(500)) + "." + randomNumber(2));
+        float price = Float.parseFloat((1 + RANDOM.nextInt(99)) + "." + randomNumber(2));
         return new Product(Long.parseLong(randomNumber(10)), randomString(3), randomString(10), randomString(20), price);
     }
 
-    public static Order generateRandomOrder(Product product, long id) {
+    public static ProductOrder generateRandomOrder(Product product, long id) {
         Calendar cl = Calendar.getInstance();
-        return new Order(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
+        return new ProductOrder(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
     }
 
-    public static Order generateRandomOrder(Product product, long id,
-                                            int year, int month, int day, int hour) {
+    public static ProductOrder generateRandomOrder(Product product, long id,
+                                                   int year, int month, int day, int hour) {
         Calendar cl = Calendar.getInstance();
         int minute = cl.get(Calendar.MINUTE);
         int second = cl.get(Calendar.SECOND);
 
         cl.set(year, month, day, hour, minute, second);
 
-        return new Order(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
+        return new ProductOrder(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
     }
 
     /** */

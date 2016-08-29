@@ -294,7 +294,7 @@
 
                                         <jar destfile="${project.build.directory}/tests-package/lib/${project.artifactId}-${project.version}-tests.jar">
                                             <fileset dir="${project.build.directory}/test-classes">
-                                                <include name="**/*.class" />
+                                                <include name="**/*" />
                                             </fileset>
                                         </jar>
 

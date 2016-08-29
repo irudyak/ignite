@@ -6,7 +6,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class Order {
+public class ProductOrder {
     private static final DateFormat FORMAT = new SimpleDateFormat("MM_dd_yyyy_HH");
 
     private long id;
@@ -15,10 +15,10 @@ public class Order {
     private int amount;
     private float price;
 
-    public Order() {
+    public ProductOrder() {
     }
 
-    public Order(Product product, long id, Date date, int amount) {
+    public ProductOrder(Product product, long id, Date date, int amount) {
         this.id = id;
         this.productId = product.getId();
         this.date = date;
