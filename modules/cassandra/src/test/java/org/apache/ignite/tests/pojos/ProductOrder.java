@@ -7,7 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ProductOrder {
-    private static final DateFormat FORMAT = new SimpleDateFormat("MM_dd_yyyy_HH");
+    private static final DateFormat FORMAT = new SimpleDateFormat("MM/dd/yyyy/S");
 
     private long id;
     private long productId;
@@ -33,7 +33,7 @@ public class ProductOrder {
         this.id = id;
     }
 
-    @QuerySqlField(index = true)
+    @QuerySqlField(index = true, name="dqwedew")
     public long getId() {
         return id;
     }
@@ -74,10 +74,10 @@ public class ProductOrder {
         return price;
     }
 
-    public void setOrderHour(String hour) {
+    public void setDayMillisecond(String part) {
     }
 
-    public String getOrderHour() {
+    public String getDayMillisecond() {
         return FORMAT.format(date);
     }
 }

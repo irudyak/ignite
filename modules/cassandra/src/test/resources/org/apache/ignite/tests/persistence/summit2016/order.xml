@@ -29,10 +29,11 @@
     <keyPersistence class="java.lang.Long" strategy="PRIMITIVE" column="id"/>
 
     <valuePersistence class="org.apache.ignite.tests.pojos.ProductOrder" strategy="POJO">
+        <field name="id"/>
         <field name="productId"/>
         <field name="date" />
         <field name="amount" />
         <field name="price" />
-        <field name="orderHour" />
+        <field name="dayMillisecond" />
     </valuePersistence>
 </persistence>

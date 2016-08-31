@@ -20,6 +20,7 @@ package org.apache.ignite.tests;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -35,6 +36,8 @@ import javax.cache.Cache;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -42,6 +45,8 @@ import java.util.*;
  * to store cache data into Cassandra tables
  */
 public class CassandraSummit2016Test {
+    private static final DateFormat FORMAT = new SimpleDateFormat("MM/dd/yyyy/");
+
     /** */
     private static final Logger LOGGER = Logger.getLogger(CassandraSummit2016Test.class.getName());
 
@@ -98,7 +103,7 @@ public class CassandraSummit2016Test {
 
             Map<Integer, Product> products = new HashMap<>();
 
-            for (int i = 0; i < 20; i++) {
+            for (int i = 1; i <= 10; i++) {
                 Product prod = TestsHelper.generateRandomProduct();
                 productCache.put(prod.getId(), prod);
 
@@ -106,10 +111,23 @@ public class CassandraSummit2016Test {
                 products.put(index, prod);
             }
 
-            for (int i = 0; i < 100000; i++) {
+            for (int i = 1; i <= 100; i++) {
                 Product prod = products.get(rand.nextInt(products.size()));
-                ProductOrder order = TestsHelper.generateRandomOrder(prod, i * 1000);
+                ProductOrder order = TestsHelper.generateRandomOrder(prod, i * 100000);
+
+                System.out.println("ORDER_MS: " + order.getDayMillisecond());
+
                 orderCache.put(order.getId(), order);
+
+                Calendar cl = Calendar.getInstance();
+
+                prod = products.get(rand.nextInt(products.size()));
+                order = TestsHelper.generateRandomOrder(prod, i * 10 , cl.get(Calendar.YEAR),
+                        cl.get(Calendar.MONTH), cl.get(Calendar.DAY_OF_MONTH) - 1, cl.get(Calendar.HOUR));
+
+                orderCache.put(order.getId(), order);
+
+                System.out.println("ORDER_MS: " + order.getDayMillisecond());
             }
 
             while (true) {
@@ -151,6 +169,14 @@ public class CassandraSummit2016Test {
             IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
             IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
 
+            Affinity affinity = ignite.affinity("product");
+            int[] partitions = affinity.allPartitions(ignite.cluster().localNode());
+            for (int i = 0; i < partitions.length; i++) {
+                System.out.println("Partition: " + i);
+
+            }
+
+
             SqlQuery sql = new SqlQuery(Product.class, "price > 50");
 
             try (QueryCursor<Cache.Entry<Long, Product>> cursor = productCache.query(sql)) {
@@ -190,6 +216,26 @@ public class CassandraSummit2016Test {
                 for (List<?> row : cursor)
                     System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2));
             }
+        }
+        catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void clientTest2() {
+        Calendar cl = Calendar.getInstance();
+        cl.set(Calendar.DAY_OF_MONTH, cl.get(Calendar.DAY_OF_MONTH) - 1);
+
+        String partitionPrefix = FORMAT.format(cl.getTime());
+
+        String query = "select * from summit2016.order_history where daymillisecond='" +
+                partitionPrefix + "${ignite_partition}'";
+
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
+            IgniteCache<Long, ProductOrder> orderHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
+            orderHistory.loadCache(null, new String[] {query});
+            System.out.println("LOADED");
         }
         catch (Throwable e) {
             e.printStackTrace();

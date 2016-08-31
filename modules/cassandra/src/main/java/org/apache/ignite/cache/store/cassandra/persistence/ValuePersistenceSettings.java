@@ -43,8 +43,10 @@ public class ValuePersistenceSettings extends PersistenceSettings {
     public ValuePersistenceSettings(Element el) {
         super(el);
 
-        if (!PersistenceStrategy.POJO.equals(getStrategy()))
+        if (!PersistenceStrategy.POJO.equals(getStrategy())) {
+            init();
             return;
+        }
 
         NodeList nodes = el.getElementsByTagName(FIELD_ELEMENT);
 
@@ -54,6 +56,7 @@ public class ValuePersistenceSettings extends PersistenceSettings {
             throw new IllegalStateException("Failed to initialize value fields for class '" + getJavaClass().getName() + "'");
 
         checkDuplicates(fields);
+        init();
     }
 
     /**

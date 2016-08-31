@@ -15,24 +15,15 @@
   limitations under the License.
 -->
 
-<persistence keyspace="summit2016" table="product">
-    <keyspaceOptions>
-        REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 3}
-        AND DURABLE_WRITES = true
-    </keyspaceOptions>
-
-    <tableOptions>
-        comment = 'A most excellent and useful table'
-        AND read_repair_chance = 0.2
-    </tableOptions>
-
+<persistence keyspace="summit2016" table="order_history">
     <keyPersistence class="java.lang.Long" strategy="PRIMITIVE" column="id"/>
 
-    <valuePersistence class="org.apache.ignite.tests.pojos.Product" strategy="POJO">
+    <valuePersistence class="org.apache.ignite.tests.pojos.ProductOrder" strategy="POJO">
         <field name="id"/>
-        <field name="type" />
-        <field name="title" />
-        <field name="description" />
+        <field name="productId"/>
+        <field name="date" />
+        <field name="amount" />
         <field name="price" />
+        <field name="dayMillisecond" />
     </valuePersistence>
 </persistence>

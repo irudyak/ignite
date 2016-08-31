@@ -55,8 +55,10 @@ public class KeyPersistenceSettings extends PersistenceSettings {
     public KeyPersistenceSettings(Element el) {
         super(el);
 
-        if (!PersistenceStrategy.POJO.equals(getStrategy()))
+        if (!PersistenceStrategy.POJO.equals(getStrategy())) {
+            init();
             return;
+        }
 
         NodeList keyElem = el.getElementsByTagName(PARTITION_KEY_ELEMENT);
 
@@ -84,6 +86,7 @@ public class KeyPersistenceSettings extends PersistenceSettings {
         fields.addAll(clusterKeyFields);
 
         checkDuplicates(fields);
+        init();
     }
 
     /** {@inheritDoc} */

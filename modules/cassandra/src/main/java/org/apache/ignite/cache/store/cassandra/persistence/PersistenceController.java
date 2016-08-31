@@ -21,8 +21,11 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.store.cassandra.common.PropertyMappingHelper;
 import org.apache.ignite.cache.store.cassandra.serializer.Serializer;
@@ -35,6 +38,12 @@ import org.apache.ignite.cache.store.cassandra.serializer.Serializer;
 public class PersistenceController {
     /** Ignite cache key/value persistence settings. */
     private KeyValuePersistenceSettings persistenceSettings;
+
+    /** List of key unique POJO fields (skipping aliases pointing to the same Cassandra table column) */
+    private List<PojoField> keyUniquePojoFields;
+
+    /** List of value unique POJO fields (skipping aliases pointing to the same Cassandra table column) */
+    private List<PojoField> valUniquePojoFields;
 
     /** CQL statement to insert row into Cassandra table. */
     private String writeStatement;
@@ -58,6 +67,35 @@ public class PersistenceController {
             throw new IllegalArgumentException("Persistent settings can't be null");
 
         this.persistenceSettings = settings;
+
+        keyUniquePojoFields = settings.getKeyPersistenceSettings().getUniqueFields();
+        valUniquePojoFields = settings.getValuePersistenceSettings().getUniqueFields();
+
+        if (valUniquePojoFields == null || valUniquePojoFields.isEmpty()) {
+            return;
+        }
+
+        List<String> keyColumns = new LinkedList<>();
+
+        if (keyUniquePojoFields == null)
+            keyColumns.add(settings.getKeyPersistenceSettings().getColumn());
+        else {
+            for (PojoField field : keyUniquePojoFields)
+                keyColumns.add(field.getColumn());
+        }
+
+        List<PojoField> fields = new LinkedList<>(valUniquePojoFields);
+
+        for (String column : keyColumns) {
+            for (int i = 0; i < fields.size(); i++) {
+                if (column.equals(fields.get(i).getColumn())) {
+                    fields.remove(i);
+                    break;
+                }
+            }
+        }
+
+        valUniquePojoFields = fields.isEmpty() ? null : Collections.unmodifiableList(fields);
     }
 
     /**
@@ -96,7 +134,7 @@ public class PersistenceController {
         if (writeStatement != null)
             return writeStatement;
 
-        List<String> cols = getKeyValueColumns();
+        Collection<String> cols = persistenceSettings.getTableColumns();
 
         StringBuilder colsList = new StringBuilder();
         StringBuilder questionsList = new StringBuilder();
@@ -131,7 +169,7 @@ public class PersistenceController {
         if (delStatement != null)
             return delStatement;
 
-        List<String> cols = getKeyColumns();
+        Collection<String> cols = persistenceSettings.getKeyPersistenceSettings().getTableColumns();
 
         StringBuilder statement = new StringBuilder();
 
@@ -163,30 +201,31 @@ public class PersistenceController {
         if (loadStatement != null && loadStatementWithKeyFields != null)
             return includeKeyFields ? loadStatementWithKeyFields : loadStatement;
 
-        List<String> valCols = getValueColumns();
+        Collection<String> keyCols = persistenceSettings.getKeyPersistenceSettings().getTableColumns();
+        StringBuilder hdrWithKeyFields = new StringBuilder();
 
-        List<String> keyCols = getKeyColumns();
-
-        StringBuilder hdrWithKeyFields = new StringBuilder("select ");
-
-        for (int i = 0; i < keyCols.size(); i++) {
-            if (i > 0)
+        for (String column : keyCols) {
+            if (hdrWithKeyFields.length() > 0)
                 hdrWithKeyFields.append(", ");
 
-            hdrWithKeyFields.append(keyCols.get(i));
+            hdrWithKeyFields.append(column);
         }
 
-        StringBuilder hdr = new StringBuilder("select ");
+        Collection<String> valCols = persistenceSettings.getValuePersistenceSettings().getTableColumns();
+        StringBuilder hdr = new StringBuilder();
 
-        for (int i = 0; i < valCols.size(); i++) {
-            if (i > 0)
+        for (String column : valCols) {
+            if (hdr.length() > 0)
                 hdr.append(", ");
 
             hdrWithKeyFields.append(",");
 
-            hdr.append(valCols.get(i));
-            hdrWithKeyFields.append(valCols.get(i));
+            hdr.append(column);
+            hdrWithKeyFields.append(column);
         }
+
+        hdrWithKeyFields.insert(0, "select ");
+        hdr.insert(0, "select ");
 
         StringBuilder statement = new StringBuilder();
 
@@ -195,11 +234,14 @@ public class PersistenceController {
         statement.append("\".\"").append(persistenceSettings.getTable());
         statement.append("\" where ");
 
-        for (int i = 0; i < keyCols.size(); i++) {
+        int i = 0;
+
+        for (String column : keyCols) {
             if (i > 0)
                 statement.append(" and ");
 
-            statement.append(keyCols.get(i)).append("=?");
+            statement.append(column).append("=?");
+            i++;
         }
 
         statement.append(";");
@@ -219,10 +261,12 @@ public class PersistenceController {
      * @return statement with bounded key.
      */
     public BoundStatement bindKey(PreparedStatement statement, Object key) {
-        KeyPersistenceSettings settings = persistenceSettings.getKeyPersistenceSettings();
+        PersistenceSettings settings = persistenceSettings.getKeyPersistenceSettings();
 
-        Object[] values = getBindingValues(settings.getStrategy(),
-            settings.getSerializer(), settings.getFields(), key);
+        Object[] values = !PersistenceStrategy.POJO.equals(settings.getStrategy()) ?
+                new Object[1] : new Object[keyUniquePojoFields.size()];
+
+        bindValues(settings.getStrategy(), settings.getSerializer(), keyUniquePojoFields, key, values, 0);
 
         return statement.bind(values);
     }
@@ -237,27 +281,13 @@ public class PersistenceController {
      * @return statement with bounded key and value.
      */
     public BoundStatement bindKeyValue(PreparedStatement statement, Object key, Object val) {
-        KeyPersistenceSettings keySettings = persistenceSettings.getKeyPersistenceSettings();
-        Object[] keyValues = getBindingValues(keySettings.getStrategy(),
-            keySettings.getSerializer(), keySettings.getFields(), key);
+        Object[] values = new Object[persistenceSettings.getTableColumns().size()];
 
-        ValuePersistenceSettings valSettings = persistenceSettings.getValuePersistenceSettings();
-        Object[] valValues = getBindingValues(valSettings.getStrategy(),
-            valSettings.getSerializer(), valSettings.getFields(), val);
+        PersistenceSettings keySettings = persistenceSettings.getKeyPersistenceSettings();
+        PersistenceSettings valSettings = persistenceSettings.getValuePersistenceSettings();
 
-        Object[] values = new Object[keyValues.length + valValues.length];
-
-        int i = 0;
-
-        for (Object keyVal : keyValues) {
-            values[i] = keyVal;
-            i++;
-        }
-
-        for (Object valVal : valValues) {
-            values[i] = valVal;
-            i++;
-        }
+        int offset = bindValues(keySettings.getStrategy(), keySettings.getSerializer(), keyUniquePojoFields, key, values, 0);
+        bindValues(valSettings.getStrategy(), valSettings.getSerializer(), valUniquePojoFields, val, values, offset);
 
         return statement.bind(values);
     }
@@ -327,17 +357,21 @@ public class PersistenceController {
     }
 
     /**
-     * Extracts field values from POJO object and converts them into Java types
-     * which could be mapped to Cassandra types.
+     * Extracts field values from POJO object, converts into Java types
+     * which could be mapped to Cassandra types and stores them inside provided values
+     * array starting from specified offset.
      *
      * @param stgy persistence strategy to use.
      * @param serializer serializer to use for BLOBs.
      * @param fields fields who's values should be extracted.
      * @param obj object instance who's field values should be extracted.
+     * @param values array to store values.
+     * @param offset offset starting from which to store fields values in the provided values array.
      *
-     * @return array of object field values converted into Java object instances having Cassandra compatible types
+     * @return next offset
      */
-    private Object[] getBindingValues(PersistenceStrategy stgy, Serializer serializer, List<PojoField> fields, Object obj) {
+    private int bindValues(PersistenceStrategy stgy, Serializer serializer, List<PojoField> fields, Object obj,
+                            Object[] values, int offset) {
         if (PersistenceStrategy.PRIMITIVE.equals(stgy)) {
             if (PropertyMappingHelper.getCassandraType(obj.getClass()) == null ||
                 obj.getClass().equals(ByteBuffer.class) || obj instanceof byte[]) {
@@ -345,15 +379,17 @@ public class PersistenceController {
                     obj.getClass().getName() + "' using PRIMITIVE strategy. Please use BLOB strategy for this case.");
             }
 
-            return new Object[] {obj};
+            values[offset] = obj;
+            return ++offset;
         }
 
-        if (PersistenceStrategy.BLOB.equals(stgy))
-            return new Object[] {serializer.serialize(obj)};
+        if (PersistenceStrategy.BLOB.equals(stgy)) {
+            values[offset] = serializer.serialize(obj);
+            return ++offset;
+        }
 
-        Object[] values = new Object[fields.size()];
-
-        int i = 0;
+        if (fields == null || fields.isEmpty())
+            return offset;
 
         for (PojoField field : fields) {
             Object val = field.getValueFromObject(obj, serializer);
@@ -361,61 +397,11 @@ public class PersistenceController {
             if (val instanceof byte[])
                 val = ByteBuffer.wrap((byte[]) val);
 
-            values[i] = val;
+            values[offset] = val;
 
-            i++;
+            offset++;
         }
 
-        return values;
-    }
-
-    /**
-     * Returns list of Cassandra table columns mapped to Ignite cache key and value fields
-     *
-     * @return list of column names
-     */
-    private List<String> getKeyValueColumns() {
-        List<String> cols = getKeyColumns();
-
-        cols.addAll(getValueColumns());
-
-        return cols;
-    }
-
-    /**
-     * Returns list of Cassandra table columns mapped to Ignite cache key fields
-     *
-     * @return list of column names
-     */
-    private List<String> getKeyColumns() {
-        return getColumns(persistenceSettings.getKeyPersistenceSettings());
-    }
-
-    /**
-     * Returns list of Cassandra table columns mapped to Ignite cache value fields
-     *
-     * @return list of column names
-     */
-    private List<String> getValueColumns() {
-        return getColumns(persistenceSettings.getValuePersistenceSettings());
-    }
-
-    /**
-     * Returns list of Cassandra table columns based on persistence strategy to use
-     *
-     * @return list of column names
-     */
-    private List<String> getColumns(PersistenceSettings settings) {
-        List<String> cols = new LinkedList<>();
-
-        if (!PersistenceStrategy.POJO.equals(settings.getStrategy())) {
-            cols.add(settings.getColumn());
-            return cols;
-        }
-
-        for (PojoField field : settings.getFields())
-            cols.add(field.getColumn());
-
-        return cols;
+        return offset;
     }
 }

@@ -42,7 +42,7 @@ public abstract class PojoField implements Serializable {
     private String name;
 
     /** Java class to which the field belongs. */
-    private Class javaCls;
+    private Class objJavaCls;
 
     /** Field column name in Cassandra table. */
     private String col;
@@ -101,6 +101,15 @@ public abstract class PojoField implements Serializable {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Returns java class of the field.
+     *
+     * @return java class.
+     */
+    public Class getJavaClass() {
+        return propDesc().getPropertyType();
     }
 
     /**
@@ -203,7 +212,7 @@ public abstract class PojoField implements Serializable {
         DataType.Name cassandraType = PropertyMappingHelper.getCassandraType(desc.getPropertyType());
         cassandraType = cassandraType == null ? DataType.Name.BLOB : cassandraType;
 
-        this.javaCls = desc.getReadMethod().getDeclaringClass();
+        this.objJavaCls = desc.getReadMethod().getDeclaringClass();
         this.desc = desc;
         this.colDDL = col + " " + cassandraType.toString();
     }
@@ -214,6 +223,6 @@ public abstract class PojoField implements Serializable {
      * @return Property descriptor
      */
     private PropertyDescriptor propDesc() {
-        return desc != null ? desc : (desc = PropertyMappingHelper.getPojoPropertyDescriptor(javaCls, name));
+        return desc != null ? desc : (desc = PropertyMappingHelper.getPojoPropertyDescriptor(objJavaCls, name));
     }
 }

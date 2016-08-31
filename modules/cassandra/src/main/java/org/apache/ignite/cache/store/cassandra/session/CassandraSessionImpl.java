@@ -588,6 +588,16 @@ public class CassandraSessionImpl implements CassandraSession {
                 log.info("-----------------------------------------------------------------------");
                 session().execute(settings.getTableDDLStatement());
                 log.info("Cassandra table '" + settings.getTableFullName() + "' was successfully created");
+
+                if (settings.getTable().equals("order")) {
+                    String materializedView = "create materialized view if not exists \"" + settings.getKeyspace() +
+                            "\".\"order_history\" as " +
+                            "select * from \"" + settings.getKeyspace() + "\".\"order\" " +
+                            "where daymillisecond is not null primary key (daymillisecond, id);";
+
+                    session().execute(materializedView);
+                }
+
                 return;
             }
             catch (AlreadyExistsException ignored) {

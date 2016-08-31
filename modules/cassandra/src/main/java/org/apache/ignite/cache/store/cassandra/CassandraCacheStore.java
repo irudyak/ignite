@@ -30,8 +30,11 @@ import java.util.concurrent.Future;
 import javax.cache.Cache;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriterException;
+
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreSession;
 import org.apache.ignite.cache.store.cassandra.datasource.DataSource;
@@ -45,6 +48,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.resources.CacheStoreSessionResource;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
 /**
@@ -64,6 +68,10 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
     /** Auto-injected logger instance. */
     @LoggerResource
     private IgniteLogger log;
+
+    /** Auto-injected ignite instance. */
+    @IgniteInstanceResource
+    private Ignite ignite;
 
     /** Cassandra data source. */
     private DataSource dataSrc;
@@ -105,7 +113,18 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
                 if (obj == null || !(obj instanceof String) || !((String)obj).trim().toLowerCase().startsWith("select"))
                     continue;
 
-                futs.add(pool.submit(new LoadCacheCustomQueryWorker<>(ses, (String) obj, controller, log, clo)));
+                String query = (String)obj;
+
+                if (!query.contains("${ignite_partition}"))
+                    futs.add(pool.submit(new LoadCacheCustomQueryWorker<>(ses, query, controller, log, clo)));
+                else {
+                    Affinity affinity = ignite.affinity(storeSes.cacheName());
+                    int[] partitions = affinity.allPartitions(ignite.cluster().localNode());
+                    for (int part : partitions) {
+                        String partQuery = query.replaceAll("\\$\\{ignite_partition\\}", Integer.toString(part));
+                        futs.add(pool.submit(new LoadCacheCustomQueryWorker<>(ses, partQuery, controller, log, clo)));
+                    }
+                }
             }
 
             for (Future<?> fut : futs)

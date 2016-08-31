@@ -24,16 +24,21 @@
         http://www.springframework.org/schema/beans/spring-beans.xsd">
 
     <!-- Cassandra connection settings -->
-    <import resource="classpath:org/apache/ignite/tests/cassandra/connection-settings.xml" />
+    <import resource="classpath:org/apache/ignite/tests/cassandra/summit2016-connection-settings.xml" />
 
     <!-- Persistence settings for 'product' cache -->
-    <bean id="product_persistence_settings" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
+    <bean id="product_persistence" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
         <constructor-arg type="org.springframework.core.io.Resource" value="classpath:org/apache/ignite/tests/persistence/summit2016/product.xml" />
     </bean>
 
     <!-- Persistence settings for 'order' cache -->
-    <bean id="order_persistence_settings" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
+    <bean id="order_persistence" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
         <constructor-arg type="org.springframework.core.io.Resource" value="classpath:org/apache/ignite/tests/persistence/summit2016/order.xml" />
+    </bean>
+
+    <!-- Persistence settings for 'order' cache -->
+    <bean id="order_history_persistence" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
+        <constructor-arg type="org.springframework.core.io.Resource" value="classpath:org/apache/ignite/tests/persistence/summit2016/order_history.xml" />
     </bean>
 
     <!-- Ignite configuration -->
@@ -49,7 +54,7 @@
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
                             <property name="dataSource" ref="cassandraAdminDataSource"/>
-                            <property name="persistenceSettings" ref="product_persistence_settings"/>
+                            <property name="persistenceSettings" ref="product_persistence"/>
                         </bean>
                     </property>
                     <property name="queryEntities">
@@ -91,7 +96,51 @@
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
                             <property name="dataSource" ref="cassandraAdminDataSource"/>
-                            <property name="persistenceSettings" ref="order_persistence_settings"/>
+                            <property name="persistenceSettings" ref="order_persistence"/>
+                        </bean>
+                    </property>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <property name="keyType" value="java.lang.Long"/>
+                                <property name="valueType" value="org.apache.ignite.tests.pojos.ProductOrder"/>
+
+                                <property name="fields">
+                                    <map>
+                                        <entry key="id" value="java.lang.Long"/>
+                                        <entry key="productId" value="java.lang.Long"/>
+                                        <entry key="date" value="java.util.Date"/>
+                                        <entry key="amount" value="java.lang.Integer"/>
+                                        <entry key="price" value="java.lang.Float"/>
+                                    </map>
+                                </property>
+
+                                <property name="indexes">
+                                    <list>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="id"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="productId"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="date"/>
+                                        </bean>
+                                    </list>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
+
+                <!-- Configuring persistence for "order_history" cache -->
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="order_history"/>
+                    <property name="readThrough" value="true"/>
+                    <property name="cacheStoreFactory">
+                        <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
+                            <property name="dataSource" ref="cassandraAdminDataSource"/>
+                            <property name="persistenceSettings" ref="order_history_persistence"/>
                         </bean>
                     </property>
                     <property name="queryEntities">
