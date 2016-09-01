@@ -46,7 +46,7 @@ import java.util.*;
  */
 public class CassandraSummit2016Test {
 
-    private static final String SERVER_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-config.xml";
+    private static final String SERVER_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-server-config.xml";
     //private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml";
     private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-remote-client-config.xml";
 
