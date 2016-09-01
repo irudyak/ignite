@@ -67,6 +67,15 @@ public class TestsHelper {
     /** */
     private static final String LOAD_TESTS_IGNITE_CONFIG = TESTS_SETTINGS.getString("load.tests.ignite.config");
 
+    private static final int LOAD_TESTS_YEAR;
+    private static final int LOAD_TESTS_MONTH;
+    private static final int LOAD_TESTS_DAY;
+
+    private static final int LOAD_TESTS_PRODUCT_MIN = parseTestSettings("load.tests.product.min");
+    private static final int LOAD_TESTS_PRODUCT_MAX = parseTestSettings("load.tests.product.max");
+    private static final int LOAD_TESTS_PRODUCT_ABS_MIN = parseTestSettings("load.tests.product.abs.min");
+    private static final int LOAD_TESTS_PRODUCT_ABS_MAX = parseTestSettings("load.tests.product.abs.max");
+
     /** */
     private static final Generator LOAD_TESTS_KEY_GENERATOR;
 
@@ -79,6 +88,17 @@ public class TestsHelper {
     }
 
     static {
+        Calendar cl = Calendar.getInstance();
+
+        String year = TESTS_SETTINGS.getString("load.tests.year");
+        LOAD_TESTS_YEAR = !year.trim().isEmpty() ? Integer.parseInt(year) : cl.get(Calendar.YEAR);
+
+        String month = TESTS_SETTINGS.getString("load.tests.month");
+        LOAD_TESTS_MONTH = !month.trim().isEmpty() ? Integer.parseInt(month) : cl.get(Calendar.MONTH);
+
+        String day = TESTS_SETTINGS.getString("load.tests.day");
+        LOAD_TESTS_DAY = !day.trim().isEmpty() ? Integer.parseInt(day) : cl.get(Calendar.DAY_OF_MONTH);
+
         try {
             LOAD_TESTS_KEY_GENERATOR = (Generator)Class.forName(TESTS_SETTINGS.getString("load.tests.key.generator")).newInstance();
             LOAD_TESTS_VALUE_GENERATOR = (Generator)Class.forName(TESTS_SETTINGS.getString("load.tests.value.generator")).newInstance();
@@ -136,6 +156,34 @@ public class TestsHelper {
     /** */
     public static Object generateLoadTestsValue(long i) {
         return LOAD_TESTS_VALUE_GENERATOR.generate(i);
+    }
+
+    public static int getLoadTestsYear() {
+        return LOAD_TESTS_YEAR;
+    }
+
+    public static int getLoadTestsMonth() {
+        return LOAD_TESTS_MONTH;
+    }
+
+    public static int getLoadTestsDay() {
+        return LOAD_TESTS_DAY;
+    }
+
+    public static int getLoadTestsProductMin() {
+        return LOAD_TESTS_PRODUCT_MIN;
+    }
+
+    public static int getLoadTestsProductMax() {
+        return LOAD_TESTS_PRODUCT_MAX;
+    }
+
+    public static int getLoadTestsProductAbsMin() {
+        return LOAD_TESTS_PRODUCT_ABS_MIN;
+    }
+
+    public static int getLoadTestsProductAbsMax() {
+        return LOAD_TESTS_PRODUCT_ABS_MAX;
     }
 
     /** */
@@ -355,6 +403,11 @@ public class TestsHelper {
         return new Product(Long.parseLong(randomNumber(10)), randomString(3), randomString(10), randomString(20), price);
     }
 
+    public static Product generateRandomProduct(long id) {
+        float price = Float.parseFloat((1 + RANDOM.nextInt(99)) + "." + randomNumber(2));
+        return new Product(id, randomString(3), randomString(10), randomString(20), price);
+    }
+
     public static ProductOrder generateRandomOrder(Product product, long id) {
         Calendar cl = Calendar.getInstance();
         return new ProductOrder(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
@@ -369,6 +422,10 @@ public class TestsHelper {
         cl.set(year, month, day, hour, minute, second);
 
         return new ProductOrder(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
+    }
+
+    public static ProductOrder generateRandomOrder(Product product, long id, Date date) {
+        return new ProductOrder(product, id, date, 1 + RANDOM.nextInt(20));
     }
 
     /** */

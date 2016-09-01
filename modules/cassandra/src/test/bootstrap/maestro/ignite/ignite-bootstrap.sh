@@ -257,12 +257,12 @@ if [ "$1" == "setup" ] || [ "$1" == "setup_start" ]; then
     setupJava
     setupTestsPackage
     downloadIgnite
-    setupIgnite "/home/ignite/.bash_profile"
+    setupIgnite "/root/.bash_profile"
 fi
 
 cmd="/opt/ignite-cassandra-tests/bootstrap/maestro/ignite/ignite-start.sh"
 
 if [ "$1" == "start" ] || [ "$1" == "setup_start" ]; then
-    sudo -u ignite -g ignite sh -c "$cmd | tee /opt/ignite/ignite-start.log"
-    #$cmd | tee /opt/ignite/ignite-start.log
+    #sudo -u ignite -g ignite sh -c "$cmd | tee /opt/ignite/ignite-start.log"
+    $cmd | tee /opt/ignite/ignite-start.log
 fi

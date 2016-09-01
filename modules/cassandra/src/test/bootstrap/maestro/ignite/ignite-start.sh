@@ -21,8 +21,8 @@
 # Script to start Ignite daemon (used by ignite-bootstrap.sh)
 # -----------------------------------------------------------------------------------------------
 
-profile=/home/ignite/.bash_profile
-#profile=/root/.bash_profile
+#profile=/home/ignite/.bash_profile
+profile=/root/.bash_profile
 
 . $profile
 . /opt/ignite-cassandra-tests/bootstrap/aws/common.sh "ignite"

@@ -294,7 +294,14 @@
 
                                         <jar destfile="${project.build.directory}/tests-package/lib/${project.artifactId}-${project.version}-tests.jar">
                                             <fileset dir="${project.build.directory}/test-classes">
-                                                <include name="**/*" />
+                                                <include name="**/*.class" />
+                                                <include name="org/apache/ignite/tests/persistence/**" />
+                                            </fileset>
+                                        </jar>
+
+                                        <jar destfile="${project.build.directory}/tests-package/lib/${project.artifactId}-${project.version}-tests-res.jar">
+                                            <fileset dir="${project.build.testSourceDirectory}/../resources">
+                                                <include name="*/**" />
                                             </fileset>
                                         </jar>
 

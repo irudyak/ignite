@@ -20,19 +20,13 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
-        http://www.springframework.org/schema/beans/spring-beans.xsd
-        http://www.springframework.org/schema/util
-        http://www.springframework.org/schema/util/spring-util.xsd">
+        http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
     <!-- Cassandra connection settings -->
-    <bean id="loadBalancingPolicy" class="com.datastax.driver.core.policies.TokenAwarePolicy">
-        <constructor-arg type="com.datastax.driver.core.policies.LoadBalancingPolicy">
-            <bean class="com.datastax.driver.core.policies.RoundRobinPolicy"/>
-        </constructor-arg>
-    </bean>
-
     <util:list id="contactPoints" value-type="java.lang.String">
-        ${CASSANDRA_SEEDS}
+        <value>ecsb00100a6e.epam.com</value>
+        <value>ecsb00100a87.epam.com</value>
+        <value>ecsb00100a8f.epam.com</value>
     </util:list>
 
     <bean id="cassandraAdminDataSource" class="org.apache.ignite.cache.store.cassandra.datasource.DataSource">
@@ -41,150 +35,192 @@
         <property name="contactPoints" ref="contactPoints"/>
         <property name="readConsistency" value="ONE"/>
         <property name="writeConsistency" value="ONE"/>
-        <property name="loadBalancingPolicy" ref="loadBalancingPolicy"/>
     </bean>
 
-    <!-- Persistence settings for 'cache1' -->
-    <bean id="cache1_settings" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
-        <constructor-arg type="java.lang.String">
-            <value><![CDATA[
-<persistence keyspace="test1" table="primitive_test1">
-    <keyPersistence class="java.lang.Long" strategy="PRIMITIVE" column="key"/>
-    <valuePersistence class="java.lang.Long" strategy="PRIMITIVE" column="value"/>
-</persistence>]]>
-            </value>
-        </constructor-arg>
+    <!-- Persistence settings for 'product' cache -->
+    <bean id="product_persistence" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
+        <constructor-arg type="org.springframework.core.io.Resource" value="classpath:org/apache/ignite/tests/persistence/summit2016/product.xml" />
     </bean>
 
-    <!-- Persistence settings for 'cache2' -->
-    <bean id="cache2_settings" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
-        <constructor-arg type="java.lang.String">
-            <value><![CDATA[
-<persistence keyspace="test1" table="blob_test1">
-    <keyPersistence class="java.lang.Long" strategy="PRIMITIVE" />
-    <valuePersistence strategy="BLOB"/>
-</persistence>]]>
-            </value>
-        </constructor-arg>
+    <!-- Persistence settings for 'order' cache -->
+    <bean id="order_persistence" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
+        <constructor-arg type="org.springframework.core.io.Resource" value="classpath:org/apache/ignite/tests/persistence/summit2016/order.xml" />
     </bean>
 
-    <!-- Persistence settings for 'cache3' -->
-    <bean id="cache3_settings" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
-        <constructor-arg type="java.lang.String">
-            <value><![CDATA[
-<persistence keyspace="test1" table="pojo_test3" ttl="86400">
-    <keyspaceOptions>
-        REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 3}
-        AND DURABLE_WRITES = true
-    </keyspaceOptions>
-    <tableOptions>
-        comment = 'A most excellent and useful table'
-        AND read_repair_chance = 0.2
-    </tableOptions>
-    <keyPersistence class="org.apache.ignite.tests.pojos.PersonId" strategy="POJO">
-        <partitionKey>
-            <field name="companyCode" column="company" />
-            <field name="departmentCode" column="department" />
-        </partitionKey>
-        <clusterKey>
-            <field name="personNumber" column="number" sort="desc"/>
-        </clusterKey>
-    </keyPersistence>
-    <valuePersistence class="org.apache.ignite.tests.pojos.Person"
-                      strategy="POJO"
-                      serializer="org.apache.ignite.cache.store.cassandra.serializer.KryoSerializer">
-        <field name="firstName" column="first_name" />
-        <field name="lastName" column="last_name" />
-        <field name="age" />
-        <field name="married" index="true"/>
-        <field name="height" />
-        <field name="weight" />
-        <field name="birthDate" column="birth_date" />
-        <field name="phones" />
-    </valuePersistence>
-</persistence>]]>
-            </value>
-        </constructor-arg>
+    <!-- Persistence settings for 'order' cache -->
+    <bean id="order_history_persistence" class="org.apache.ignite.cache.store.cassandra.persistence.KeyValuePersistenceSettings">
+        <constructor-arg type="org.springframework.core.io.Resource" value="classpath:org/apache/ignite/tests/persistence/summit2016/order_history.xml" />
     </bean>
 
     <!-- Ignite configuration -->
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
-
         <property name="cacheConfiguration">
             <list>
-                <!-- Configuring persistence for "cache1" cache -->
+                <!-- Configuring persistence for "product" cache -->
                 <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="cache1"/>
-                    <property name="startSize" value="1000000"/>
-                    <property name="cacheMode" value="PARTITIONED"/>
-                    <property name="backups" value="0"/>
-                    <property name="offHeapMaxMemory" value="0"/>
-                    <property name="swapEnabled" value="false"/>
+                    <property name="name" value="product"/>
                     <property name="readThrough" value="true"/>
                     <property name="writeThrough" value="true"/>
                     <property name="writeBehindEnabled" value="true"/>
+                    <property name="swapEnabled" value="false"/>
+                    <property name="startSize" value="1048576"/>
+                    <property name="cacheMode" value="REPLICATED"/>
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
-                            <property name="dataSourceBean" value="cassandraAdminDataSource"/>
-                            <property name="persistenceSettingsBean" value="cache1_settings"/>
+                            <property name="dataSource" ref="cassandraAdminDataSource"/>
+                            <property name="persistenceSettings" ref="product_persistence"/>
                         </bean>
+                    </property>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <property name="keyType" value="java.lang.Long"/>
+                                <property name="valueType" value="org.apache.ignite.tests.pojos.Product"/>
+
+                                <property name="fields">
+                                    <map>
+                                        <entry key="id" value="java.lang.Long"/>
+                                        <entry key="type" value="java.lang.String"/>
+                                        <entry key="title" value="java.lang.String"/>
+                                        <entry key="description" value="java.lang.String"/>
+                                        <entry key="price" value="java.lang.Float"/>
+                                    </map>
+                                </property>
+
+                                <property name="indexes">
+                                    <list>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="id"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="title"/>
+                                        </bean>
+                                    </list>
+                                </property>
+                            </bean>
+                        </list>
                     </property>
                 </bean>
 
-                <!-- Configuring persistence for "cache2" cache -->
+                <!-- Configuring persistence for "order" cache -->
                 <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="cache2"/>
-                    <property name="startSize" value="1000000"/>
-                    <property name="cacheMode" value="PARTITIONED"/>
-                    <property name="backups" value="0"/>
-                    <property name="offHeapMaxMemory" value="0"/>
-                    <property name="swapEnabled" value="false"/>
+                    <property name="name" value="order"/>
                     <property name="readThrough" value="true"/>
                     <property name="writeThrough" value="true"/>
                     <property name="writeBehindEnabled" value="true"/>
-                    <property name="cacheStoreFactory">
-                        <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
-                            <property name="dataSourceBean" value="cassandraAdminDataSource"/>
-                            <property name="persistenceSettingsBean" value="cache2_settings"/>
-                        </bean>
-                    </property>
-                </bean>
-
-                <!-- Configuring persistence for "cache3" cache -->
-                <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="cache3"/>
-                    <property name="startSize" value="1000000"/>
-                    <property name="cacheMode" value="PARTITIONED"/>
-                    <property name="backups" value="0"/>
-                    <property name="offHeapMaxMemory" value="0"/>
                     <property name="swapEnabled" value="false"/>
-                    <property name="readThrough" value="true"/>
-                    <property name="writeThrough" value="true"/>
-                    <property name="writeBehindEnabled" value="true"/>
+                    <property name="startSize" value="10048576"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
+                    <property name="offHeapMaxMemory" value="3221225472"/>
+                    <property name="evictionPolicy">
+                        <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">
+                            <property name="maxSize" value="10000000"/>
+                        </bean>
+                    </property>
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
-                            <property name="dataSourceBean" value="cassandraAdminDataSource"/>
-                            <property name="persistenceSettingsBean" value="cache3_settings"/>
+                            <property name="dataSource" ref="cassandraAdminDataSource"/>
+                            <property name="persistenceSettings" ref="order_persistence"/>
                         </bean>
+                    </property>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <property name="keyType" value="java.lang.Long"/>
+                                <property name="valueType" value="org.apache.ignite.tests.pojos.ProductOrder"/>
+
+                                <property name="fields">
+                                    <map>
+                                        <entry key="id" value="java.lang.Long"/>
+                                        <entry key="productId" value="java.lang.Long"/>
+                                        <entry key="date" value="java.util.Date"/>
+                                        <entry key="amount" value="java.lang.Integer"/>
+                                        <entry key="price" value="java.lang.Float"/>
+                                    </map>
+                                </property>
+
+                                <property name="indexes">
+                                    <list>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="id"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="productId"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="date"/>
+                                        </bean>
+                                    </list>
+                                </property>
+                            </bean>
+                        </list>
                     </property>
                 </bean>
 
+                <!-- Configuring persistence for "order_history" cache -->
+                <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="order_history"/>
+                    <property name="readThrough" value="true"/>
+                    <property name="swapEnabled" value="false"/>
+                    <property name="startSize" value="10048576"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
+                    <property name="offHeapMaxMemory" value="3221225472"/>
+                    <property name="evictionPolicy">
+                        <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">
+                            <property name="maxSize" value="10000000"/>
+                        </bean>
+                    </property>
+                    <property name="cacheStoreFactory">
+                        <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
+                            <property name="dataSource" ref="cassandraAdminDataSource"/>
+                            <property name="persistenceSettings" ref="order_history_persistence"/>
+                        </bean>
+                    </property>
+                    <property name="queryEntities">
+                        <list>
+                            <bean class="org.apache.ignite.cache.QueryEntity">
+                                <property name="keyType" value="java.lang.Long"/>
+                                <property name="valueType" value="org.apache.ignite.tests.pojos.ProductOrder"/>
+
+                                <property name="fields">
+                                    <map>
+                                        <entry key="id" value="java.lang.Long"/>
+                                        <entry key="productId" value="java.lang.Long"/>
+                                        <entry key="date" value="java.util.Date"/>
+                                        <entry key="amount" value="java.lang.Integer"/>
+                                        <entry key="price" value="java.lang.Float"/>
+                                    </map>
+                                </property>
+
+                                <property name="indexes">
+                                    <list>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="id"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="productId"/>
+                                        </bean>
+                                        <bean class="org.apache.ignite.cache.QueryIndex">
+                                            <constructor-arg value="date"/>
+                                        </bean>
+                                    </list>
+                                </property>
+                            </bean>
+                        </list>
+                    </property>
+                </bean>
             </list>
         </property>
 
+        <!-- Explicitly configure TCP discovery SPI to provide list of initial nodes. -->
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
                 <property name="ipFinder">
                     <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
-                        <property name="addresses">
-                            <list>
-                                ${IGNITE_SEEDS}
-                            </list>
-                        </property>
+                        <property name="multicastGroup" value="228.10.10.157"/>
                     </bean>
                 </property>
             </bean>
         </property>
-
     </bean>
 </beans>

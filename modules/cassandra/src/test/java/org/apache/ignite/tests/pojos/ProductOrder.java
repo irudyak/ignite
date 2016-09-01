@@ -29,6 +29,17 @@ public class ProductOrder {
             this.price = this.price * 0.95F;
     }
 
+    public ProductOrder(long productId, float productPrice, long id, Date date, int amount) {
+        this.id = id;
+        this.productId = productId;
+        this.date = date;
+        this.amount = amount;
+        this.price = productPrice * amount;
+
+        if (amount > 10)
+            this.price = this.price * 0.95F;
+    }
+
     public void setId(long id) {
         this.id = id;
     }
