@@ -102,7 +102,7 @@ public class CassandraSummit2016Test {
             IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
 
             Map<Integer, Product> products = new HashMap<>();
-
+/*
             for (int i = 1; i <= 10; i++) {
                 Product prod = TestsHelper.generateRandomProduct();
                 productCache.put(prod.getId(), prod);
@@ -126,10 +126,8 @@ public class CassandraSummit2016Test {
                         cl.get(Calendar.MONTH), cl.get(Calendar.DAY_OF_MONTH) - 1, cl.get(Calendar.HOUR));
 
                 orderCache.put(order.getId(), order);
-
-                System.out.println("ORDER_MS: " + order.getDayMillisecond());
             }
-
+*/
             while (true) {
                 try {
                     Thread.sleep(10000);

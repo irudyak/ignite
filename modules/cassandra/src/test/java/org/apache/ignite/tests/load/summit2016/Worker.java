@@ -206,7 +206,7 @@ public abstract class Worker extends Thread {
     }
 
     /** */
-    private long getWarmUpSpeed() {
+    public long getWarmUpSpeed() {
         if (warmupMsgProcessed == 0)
             return 0;
 

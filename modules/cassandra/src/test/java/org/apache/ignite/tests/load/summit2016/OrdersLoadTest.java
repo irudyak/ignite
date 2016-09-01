@@ -1,7 +1,12 @@
 package org.apache.ignite.tests.load.summit2016;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.tests.utils.TestsHelper;
 import org.apache.log4j.Logger;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class OrdersLoadTest extends LoadTestDriver {
     private static final Logger LOGGER = Logger.getLogger("OrdersLoadTests");

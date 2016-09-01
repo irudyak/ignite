@@ -169,9 +169,9 @@ public abstract class LoadTestDriver {
         long speed = 0;
 
         for (Worker worker : workers) {
-            cnt += worker.getMsgProcessed();
+            cnt += worker.getMsgCountTotal();
             errCnt += worker.getErrorsCount();
-            speed += worker.getSpeed();
+            speed += worker.getSpeed() != 0 ? worker.getSpeed() : worker.getWarmUpSpeed();
         }
 
         float errPercent = errCnt == 0 ?
