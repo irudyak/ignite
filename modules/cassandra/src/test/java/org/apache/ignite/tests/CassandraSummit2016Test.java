@@ -45,7 +45,10 @@ import java.util.*;
  * to store cache data into Cassandra tables
  */
 public class CassandraSummit2016Test {
-    private static final DateFormat FORMAT = new SimpleDateFormat("MM/dd/yyyy/");
+
+    private static final String SERVER_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-config.xml";
+    //private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml";
+    private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-remote-client-config.xml";
 
     /** */
     private static final Logger LOGGER = Logger.getLogger(CassandraSummit2016Test.class.getName());
@@ -97,7 +100,7 @@ public class CassandraSummit2016Test {
 
         setUpClass();
 
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-config.xml")) {
+        try (Ignite ignite = Ignition.start(SERVER_CONF)) {
             IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
             IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
 
@@ -146,7 +149,7 @@ public class CassandraSummit2016Test {
             Class.forName("org.apache.ignite.IgniteJdbcDriver");
 
             // Open JDBC connection (cache name is not specified, which means that we use default cache).
-            Connection conn = DriverManager.getConnection("jdbc:ignite:cfg://file:///D:/Projects/ignite/modules/cassandra/src/test/resources/org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml");
+            Connection conn = DriverManager.getConnection("jdbc:ignite:cfg://file:///D:/Projects/ignite/modules/cassandra/src/test/resources/" + CLIENT_CONF);
 
             // Query names of all people.
             ResultSet rs = conn.createStatement().executeQuery("select * from Product");
@@ -163,7 +166,7 @@ public class CassandraSummit2016Test {
 
     @Test
     public void clientTest1() {
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
+        try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
             IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
 
@@ -225,12 +228,14 @@ public class CassandraSummit2016Test {
         Calendar cl = Calendar.getInstance();
         cl.set(Calendar.DAY_OF_MONTH, cl.get(Calendar.DAY_OF_MONTH) - 1);
 
-        String partitionPrefix = FORMAT.format(cl.getTime());
+        DateFormat df = new SimpleDateFormat("MM/dd/yyyy/");
+
+        String partitionPrefix = df.format(cl.getTime());
 
         String query = "select * from summit2016.order_history where daymillisecond='" +
                 partitionPrefix + "${ignite_partition}'";
 
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
+        try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, ProductOrder> orderHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
             orderHistory.loadCache(null, new String[] {query});
             System.out.println("LOADED");
@@ -242,7 +247,7 @@ public class CassandraSummit2016Test {
 
     @Test
     public void clientTest3() {
-        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
+        try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, Product> products = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
             products.clear();
             System.out.println("CLEARED");

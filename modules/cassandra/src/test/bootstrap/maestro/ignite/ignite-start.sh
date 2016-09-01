@@ -25,29 +25,7 @@
 profile=/root/.bash_profile
 
 . $profile
-. /opt/ignite-cassandra-tests/bootstrap/aws/common.sh "ignite"
-
-# Setups Cassandra seeds for this Ignite node being able to connect to Cassandra.
-# Looks for the information in S3 about already up and running Cassandra cluster nodes.
-setupCassandraSeeds()
-{
-    if [ -z "$CASSANDRA_SEEDS" ]; then
-        terminate "Cassandra seeds is not specified"
-    fi
-
-    CLUSTER_SEEDS=($CASSANDRA_SEEDS)
-	count=${#CLUSTER_SEEDS[@]}
-
-    CASSANDRA_SEEDS=
-
-	for (( i=0; i<=$(( $count -1 )); i++ ))
-	do
-		seed=${CLUSTER_SEEDS[$i]}
-        CASSANDRA_SEEDS="${CASSANDRA_SEEDS}<value>$seed<\/value>"
-	done
-
-    cat /opt/ignite/config/ignite-cassandra-server-template.xml | sed -r "s/\\\$\{CASSANDRA_SEEDS\}/$CASSANDRA_SEEDS/g" > /opt/ignite/config/ignite-cassandra-server.xml
-}
+. /opt/ignite-cassandra-tests/bootstrap/maestro/common.sh "ignite"
 
 # Checks status of Ignite daemon
 checkIgniteStatus()
@@ -86,7 +64,8 @@ startIgnite()
     echo "[INFO]-------------------------------------------------------------"
     echo ""
 
-    setupCassandraSeeds
+    rm -Rf /opt/ignite/config/ignite-cassandra-server.xml
+    cp /opt/ignite/config/ignite-cassandra-server-template.xml /opt/ignite/config/ignite-cassandra-server.xml
 
     proc=$(ps -ef | grep java | grep "org.apache.ignite.startup.cmdline.CommandLineStartup")
     proc=($proc)
@@ -155,11 +134,6 @@ while true; do
 
     # Handling situation when Ignite daemon process abnormally terminated
     if [ -z "$proc" ]; then
-        # If this is the first node of Ignite cluster just terminating with error
-        if [ "$FIRST_NODE_LOCK" == "true" ]; then
-            terminate "Failed to start Ignite daemon"
-        fi
-
         echo "[WARN] Failed to start Ignite daemon. Sleeping for extra 30sec"
         sleep 30s
 

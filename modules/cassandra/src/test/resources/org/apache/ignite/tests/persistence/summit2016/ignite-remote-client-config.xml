@@ -56,6 +56,8 @@
 
     <!-- Ignite configuration -->
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="clientMode" value="true"/>
+
         <property name="cacheConfiguration">
             <list>
                 <!-- Configuring persistence for "product" cache -->
@@ -219,7 +221,13 @@
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
                 <property name="ipFinder">
                     <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
-                        <property name="multicastGroup" value="228.10.10.157"/>
+                        <property name="addresses">
+                            <list>
+                                <value>ecsb00100a92.epam.com</value>
+                                <value>ecsb00100a94.epam.com</value>
+                                <value>ecsb00100a93.epam.com</value>
+                            </list>
+                        </property>
                     </bean>
                 </property>
             </bean>

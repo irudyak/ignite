@@ -238,7 +238,6 @@ setupIgnite()
     echo "export USER_LIBS=\$IGNITE_HOME/libs/optional/ignite-cassandra/*:\$IGNITE_HOME/libs/optional/ignite-slf4j/*" >> $1
     echo "export PATH=\$JAVA_HOME/bin:\$IGNITE_HOME/bin:\$PATH" >> $1
     echo "export GANGLIA_MASTER=$GANGLIA_MASTER" >> $1
-    echo "export CASSANDRA_SEEDS=\"$CASSANDRA_SEEDS\"" >> $1
 }
 
 ###################################################################################################################
@@ -250,7 +249,6 @@ echo "[INFO]-----------------------------------------------------------------"
 export SSH_USER=$2
 export SSH_PASSWORD=$3
 export GANGLIA_MASTER=$4
-export CASSANDRA_SEEDS=$5
 
 if [ "$1" == "setup" ] || [ "$1" == "setup_start" ]; then
     setupPreRequisites
@@ -266,3 +264,5 @@ if [ "$1" == "start" ] || [ "$1" == "setup_start" ]; then
     #sudo -u ignite -g ignite sh -c "$cmd | tee /opt/ignite/ignite-start.log"
     $cmd | tee /opt/ignite/ignite-start.log
 fi
+
+terminate
