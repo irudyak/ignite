@@ -239,4 +239,16 @@ public class CassandraSummit2016Test {
             e.printStackTrace();
         }
     }
+
+    @Test
+    public void clientTest3() {
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml")) {
+            IgniteCache<Long, Product> products = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
+            products.clear();
+            System.out.println("CLEARED");
+        }
+        catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
 }
