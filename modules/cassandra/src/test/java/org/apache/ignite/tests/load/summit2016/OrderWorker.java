@@ -15,13 +15,11 @@ public class OrderWorker extends Worker {
 
     static {
         String[] parts = SystemHelper.HOST_IP.split("\\.");
-        if (parts[2].equals("0"))
-            parts[2] = "777";
 
-        if (parts[3].equals("0"))
-            parts[3] = "777";
+        String prefix = parts[3];
+        prefix = prefix.length() > 2 ? prefix.substring(prefix.length() - 2) : prefix;
 
-        HOST_PREFIX = parts[3] + parts[2];
+        HOST_PREFIX = prefix;
     }
 
     private final Random RANDOM = new Random(System.currentTimeMillis());

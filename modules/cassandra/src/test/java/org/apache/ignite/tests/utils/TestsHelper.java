@@ -404,7 +404,7 @@ public class TestsHelper {
     }
 
     public static Product generateRandomProduct(long id) {
-        return new Product(id, randomString(3), randomString(10), randomString(20), generateProductPrice(id));
+        return new Product(id, randomString(2), randomString(10), randomString(20), generateProductPrice(id));
     }
 
     public static ProductOrder generateRandomOrder(Product product, long id) {
