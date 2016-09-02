@@ -240,6 +240,7 @@ setupIgnite()
     echo "export USER_LIBS=\$IGNITE_HOME/libs/optional/ignite-cassandra/*:\$IGNITE_HOME/libs/optional/ignite-slf4j/*" >> $1
     echo "export PATH=\$JAVA_HOME/bin:\$IGNITE_HOME/bin:\$PATH" >> $1
     echo "export GANGLIA_MASTER=$GANGLIA_MASTER" >> $1
+    echo "export JVM_OPTS=\"-server -Xms8g -Xmx8g -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+UseTLAB -XX:NewSize=128m -XX:MaxNewSize=128m -XX:MaxTenuringThreshold=0 -XX:SurvivorRatio=1024 -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=40 -XX:MaxGCPauseMillis=1000 -XX:InitiatingHeapOccupancyPercent=50 -XX:+UseCompressedOops -XX:ParallelGCThreads=8 -XX:ConcGCThreads=8 -XX:+DisableExplicitGC\"" >> $1
 }
 
 ###################################################################################################################
