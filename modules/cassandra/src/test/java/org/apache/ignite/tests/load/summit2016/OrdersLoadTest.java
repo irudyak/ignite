@@ -48,7 +48,7 @@ public class OrdersLoadTest extends LoadTestDriver {
     }
 
     @Override
-    protected Worker createWorker(Ignite ignite, long startPosition, long endPosition) {
-        return new OrderWorker(ignite, startPosition, endPosition);
+    protected Worker createWorker(Ignite ignite, long startPosition, long endPosition, int workerNumber) {
+        return new OrderWorker(ignite, startPosition, endPosition, workerNumber);
     }
 }

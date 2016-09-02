@@ -18,7 +18,7 @@
 #
 
 # -----------------------------------------------------------------------------------------------
-# Bootstrap script to spin up Ignite cluster
+# Bootstrap script to spin up Tests cluster
 # -----------------------------------------------------------------------------------------------
 
 # URL to download JDK
@@ -33,13 +33,13 @@ terminate()
     if [ -n "$1" ]; then
         echo "[ERROR] $1"
         echo "[ERROR]-----------------------------------------------------"
-        echo "[ERROR] Ignite node bootstrap failed"
+        echo "[ERROR] Test node bootstrap failed"
         echo "[ERROR]-----------------------------------------------------"
         exit 1
     fi
 
     echo "[INFO]-----------------------------------------------------"
-    echo "[INFO] Ignite node bootstrap successfully completed"
+    echo "[INFO] Test node bootstrap successfully completed"
     echo "[INFO]-----------------------------------------------------"
 
     exit 0
@@ -172,37 +172,32 @@ setupTestsPackage()
 
     rm -Rf /opt/ignite-cassandra-tests/lib/ignite-cassandra-1.8.0-SNAPSHOT-tests-res.jar
 
-    . /opt/ignite-cassandra-tests/bootstrap/maestro/common.sh "ignite"
+    . /opt/ignite-cassandra-tests/bootstrap/maestro/common.sh "test"
 
     setupNTP
 
-    bootstrapGangliaAgent "ignite" 8642
-}
+    bootstrapGangliaAgent "test" 8643
 
-# Downloads Ignite package
-downloadIgnite()
-{
-    downloadPackage "$IGNITE_DOWNLOAD_URL" "/opt/ignite.zip" "Ignite"
+    ###################################################
+    # Extra configuration specific only for test node #
+    ###################################################
 
-    rm -Rf /opt/ignite
+    echo "[INFO] Installing bc package"
 
-    echo "[INFO] Unzipping Ignite package"
-    unzip /opt/ignite.zip -d /opt
+    yum -y install bc
+
     if [ $? -ne 0 ]; then
-        terminate "Failed to unzip Ignite package"
+        terminate "Failed to install bc package"
     fi
 
-    rm -f /opt/ignite.zip
+    echo "[INFO] Installing zip package"
 
-    unzipDir=$(ls /opt | grep "ignite" | grep "apache")
-    if [ "$unzipDir" != "ignite" ]; then
-        mv /opt/$unzipDir /opt/ignite
+    yum -y install zip
+
+    if [ $? -ne 0 ]; then
+        terminate "Failed to install zip package"
     fi
-}
 
-# Setups Ignite
-setupIgnite()
-{
     echo "[INFO] Creating 'ignite' group"
     exists=$(cat /etc/group | grep ignite)
     if [ -z "$exists" ]; then
@@ -221,50 +216,25 @@ setupIgnite()
         fi
     fi
 
-    testsJar=$(find /opt/ignite-cassandra-tests -type f -name "*.jar" | grep ignite-cassandra- | grep tests.jar)
-    if [ -n "$testsJar" ]; then
-        echo "[INFO] Coping tests jar $testsJar into /opt/ignite/libs/optional/ignite-cassandra"
-        cp $testsJar /opt/ignite/libs/optional/ignite-cassandra
-        if [ $? -ne 0 ]; then
-            terminate "Failed copy $testsJar into /opt/ignite/libs/optional/ignite-cassandra"
-        fi
-    fi
-
-    rm -f /opt/ignite/config/ignite-cassandra-server-template.xml
-    mv -f /opt/ignite-cassandra-tests/bootstrap/maestro/ignite/ignite-cassandra-server-template.xml /opt/ignite/config
-
-    chown -R ignite:ignite /opt/ignite /opt/ignite-cassandra-tests
+    mkdir -p /opt/ignite-cassandra-tests/logs
+    chown -R ignite:ignite /opt/ignite-cassandra-tests
 
     echo "export JAVA_HOME=/opt/java" >> $1
-    echo "export IGNITE_HOME=/opt/ignite" >> $1
-    echo "export USER_LIBS=\$IGNITE_HOME/libs/optional/ignite-cassandra/*:\$IGNITE_HOME/libs/optional/ignite-slf4j/*" >> $1
-    echo "export PATH=\$JAVA_HOME/bin:\$IGNITE_HOME/bin:\$PATH" >> $1
-    echo "export GANGLIA_MASTER=$GANGLIA_MASTER" >> $1
+    echo "export PATH=\$JAVA_HOME/bin:\$PATH" >> $1
 }
 
 ###################################################################################################################
 
 echo "[INFO]-----------------------------------------------------------------"
-echo "[INFO] Bootstrapping Ignite node"
+echo "[INFO] Bootstrapping Tests node"
 echo "[INFO]-----------------------------------------------------------------"
 
-export SSH_USER=$2
-export SSH_PASSWORD=$3
-export GANGLIA_MASTER=$4
+export SSH_USER=$1
+export SSH_PASSWORD=$2
+export GANGLIA_MASTER=$3
 
-if [ "$1" == "setup" ] || [ "$1" == "setup_start" ]; then
-    setupPreRequisites
-    setupJava
-    setupTestsPackage
-    downloadIgnite
-    setupIgnite "/root/.bash_profile"
-fi
-
-cmd="/opt/ignite-cassandra-tests/bootstrap/maestro/ignite/ignite-start.sh"
-
-if [ "$1" == "start" ] || [ "$1" == "setup_start" ]; then
-    #sudo -u ignite -g ignite sh -c "$cmd | tee /opt/ignite/ignite-start.log"
-    $cmd | tee /opt/ignite/ignite-start.log
-fi
+setupPreRequisites
+setupJava
+setupTestsPackage "/root/.bash_profile"
 
 terminate

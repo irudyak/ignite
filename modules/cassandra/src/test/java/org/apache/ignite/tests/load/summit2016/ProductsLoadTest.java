@@ -42,7 +42,7 @@ public class ProductsLoadTest extends LoadTestDriver {
 
     @Override
     protected long endPosition() {
-        int pos = (int)startPosition() + DELTA - 1;
+        int pos = (int)startPosition() + DELTA;
         ++iteration;
         return pos <= MAX ? pos : MAX;
     }
@@ -53,7 +53,7 @@ public class ProductsLoadTest extends LoadTestDriver {
     }
 
     @Override
-    protected Worker createWorker(Ignite ignite, long startPosition, long endPosition) {
+    protected Worker createWorker(Ignite ignite, long startPosition, long endPosition, int workerNumber) {
         return new ProductWorker(ignite, startPosition, endPosition);
     }
 }

@@ -82,7 +82,7 @@ public abstract class LoadTestDriver {
             logger().info("Starting workers");
 
             for (int i = 0; i < TestsHelper.getLoadTestsThreadsCount(); i++) {
-                Worker worker = createWorker(ignite, startPosition(), endPosition());
+                Worker worker = createWorker(ignite, startPosition(), endPosition(), i);
                 workers.add(worker);
                 worker.setName(testName() + "-worker-" + i);
                 worker.start();
@@ -134,7 +134,7 @@ public abstract class LoadTestDriver {
     protected abstract Logger logger();
 
     /** */
-    protected abstract Worker createWorker(Ignite ignite, long startPosition, long endPosition);
+    protected abstract Worker createWorker(Ignite ignite, long startPosition, long endPosition, int workerNumber);
 
     /** */
     private void printTestResultsHeader(String testName, List<String> failedWorkers) {

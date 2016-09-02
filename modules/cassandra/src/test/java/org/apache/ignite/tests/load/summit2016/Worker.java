@@ -79,7 +79,7 @@ public abstract class Worker extends Thread {
     private IgniteCache igniteCache;
 
     /** */
-    private Logger log;
+    protected final Logger log;
 
     /** */
     public Worker(Ignite ignite, long startPosition, long endPosition) {

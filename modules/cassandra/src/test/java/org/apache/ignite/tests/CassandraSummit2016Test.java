@@ -224,16 +224,8 @@ public class CassandraSummit2016Test {
     }
 
     @Test
-    public void clientTest2() {
-        Calendar cl = Calendar.getInstance();
-        cl.set(Calendar.DAY_OF_MONTH, cl.get(Calendar.DAY_OF_MONTH) - 1);
-
-        DateFormat df = new SimpleDateFormat("MM/dd/yyyy/");
-
-        String partitionPrefix = df.format(cl.getTime());
-
-        String query = "select * from summit2016.order_history where daymillisecond='" +
-                partitionPrefix + "${ignite_partition}'";
+    public void warmup() {
+        String query = "select * from summit2016.order_history where daymillisecond='09/02/2016/${ignite_partition}'";
 
         try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, ProductOrder> orderHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));

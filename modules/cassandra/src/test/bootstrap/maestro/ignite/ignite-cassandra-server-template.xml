@@ -66,7 +66,7 @@
                     <property name="writeBehindEnabled" value="true"/>
                     <property name="swapEnabled" value="false"/>
                     <property name="startSize" value="1048576"/>
-                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
                             <property name="dataSource" ref="cassandraAdminDataSource"/>

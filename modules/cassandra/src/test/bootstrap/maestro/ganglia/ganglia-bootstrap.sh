@@ -33,13 +33,13 @@ terminate()
     if [ -n "$1" ]; then
         echo "[ERROR] $1"
         echo "[ERROR]-----------------------------------------------------"
-        echo "[ERROR] Cassandra node bootstrap failed"
+        echo "[ERROR] Ganglia node bootstrap failed"
         echo "[ERROR]-----------------------------------------------------"
         exit 1
     fi
 
     echo "[INFO]-----------------------------------------------------"
-    echo "[INFO] Cassandra node bootstrap successfully completed"
+    echo "[INFO] Ganglia node bootstrap successfully completed"
     echo "[INFO]-----------------------------------------------------"
 
     exit 0

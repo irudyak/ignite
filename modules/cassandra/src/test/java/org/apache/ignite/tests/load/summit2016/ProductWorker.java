@@ -34,6 +34,8 @@ public class ProductWorker extends Worker {
         long id = position++;
         Product prod = TestsHelper.generateRandomProduct(id);
 
+        log.info("New product: " + id);
+
         return new Object[]{id, prod};
     }
 }

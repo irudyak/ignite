@@ -55,7 +55,7 @@
                     <property name="writeBehindEnabled" value="true"/>
                     <property name="swapEnabled" value="false"/>
                     <property name="startSize" value="10000"/>
-                    <property name="cacheMode" value="REPLICATED"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
 
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">

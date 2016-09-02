@@ -19,7 +19,7 @@ echo off
 
 echo.
 
-set TESTS_CLASSPATH="%~dp0\lib*;%~dp0settings"
+set TESTS_CLASSPATH="%~dp0lib\*;%~dp0settings"
 
 call %~dp0jvm-opts.bat %*
 

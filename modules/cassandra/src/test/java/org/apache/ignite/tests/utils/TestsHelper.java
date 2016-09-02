@@ -400,12 +400,11 @@ public class TestsHelper {
 
     public static Product generateRandomProduct() {
         float price = Float.parseFloat((1 + RANDOM.nextInt(99)) + "." + randomNumber(2));
-        return new Product(Long.parseLong(randomNumber(10)), randomString(3), randomString(10), randomString(20), price);
+        return new Product(Long.parseLong(randomNumber(10)), randomString(2), randomString(10), randomString(20), price);
     }
 
     public static Product generateRandomProduct(long id) {
-        float price = Float.parseFloat((1 + RANDOM.nextInt(99)) + "." + randomNumber(2));
-        return new Product(id, randomString(3), randomString(10), randomString(20), price);
+        return new Product(id, randomString(3), randomString(10), randomString(20), generateProductPrice(id));
     }
 
     public static ProductOrder generateRandomOrder(Product product, long id) {
@@ -413,19 +412,8 @@ public class TestsHelper {
         return new ProductOrder(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
     }
 
-    public static ProductOrder generateRandomOrder(Product product, long id,
-                                                   int year, int month, int day, int hour) {
-        Calendar cl = Calendar.getInstance();
-        int minute = cl.get(Calendar.MINUTE);
-        int second = cl.get(Calendar.SECOND);
-
-        cl.set(year, month, day, hour, minute, second);
-
-        return new ProductOrder(product, id, cl.getTime(), 1 + RANDOM.nextInt(20));
-    }
-
-    public static ProductOrder generateRandomOrder(Product product, long id, Date date) {
-        return new ProductOrder(product, id, date, 1 + RANDOM.nextInt(20));
+    public static ProductOrder generateRandomOrder(long productId, long id, Date date) {
+        return new ProductOrder(productId, generateProductPrice(productId), id, date, 1 + RANDOM.nextInt(20));
     }
 
     /** */
@@ -446,5 +434,22 @@ public class TestsHelper {
             builder.append(NUMBERS_ALPHABET.charAt(RANDOM.nextInt(NUMBERS_ALPHABET.length())));
 
         return builder.toString();
+    }
+
+    private static float generateProductPrice(long id) {
+        float price = Long.parseLong(Long.toString(id).replace("0", ""));
+
+        int i = 0;
+
+        while (price > 100) {
+            if (i % 2 != 0)
+                price = price / 2;
+            else
+                price = (float) Math.sqrt(price);
+
+            i++;
+        }
+
+        return ((float)((int)(price * 100))) / 100.0F;
     }
 }
