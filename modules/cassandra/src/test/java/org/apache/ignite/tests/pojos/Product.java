@@ -21,6 +21,16 @@ public class Product {
     }
 
     @Override
+    public int hashCode() {
+        return ((Long)id).hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Product && id == ((Product) obj).id;
+    }
+
+    @Override
     public String toString() {
         return id + ", " + price + ", " + type + ", " + title + ", " + description;
     }

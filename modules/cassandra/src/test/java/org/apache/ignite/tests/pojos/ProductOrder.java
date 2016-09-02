@@ -40,6 +40,16 @@ public class ProductOrder {
             this.price = this.price * 0.95F;
     }
 
+    @Override
+    public int hashCode() {
+        return ((Long)id).hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof ProductOrder && id == ((ProductOrder) obj).id;
+    }
+
     public void setId(long id) {
         this.id = id;
     }

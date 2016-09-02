@@ -238,11 +238,14 @@ public class CassandraSummit2016Test {
     }
 
     @Test
-    public void clientTest3() {
+    public void clearCache() {
         try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, Product> products = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
+            IgniteCache<Long, ProductOrder> orders = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
+            IgniteCache<Long, ProductOrder> ordersHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
             products.clear();
-            System.out.println("CLEARED");
+            orders.clear();
+            ordersHistory.clear();
         }
         catch (Throwable e) {
             e.printStackTrace();
