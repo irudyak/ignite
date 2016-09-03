@@ -38,8 +38,8 @@ export EC2_TEST_TAG=TEST
 export EC2_GANGLIA_TAG=GANGLIA
 
 # Tests summary settings
-export CASSANDRA_NODES_COUNT=3
-export IGNITE_NODES_COUNT=3
+export CASSANDRA_NODES_COUNT=6
+export IGNITE_NODES_COUNT=1
 export TEST_NODES_COUNT=2
 export TESTS_TYPE="ignite"
 
@@ -50,14 +50,14 @@ export SERVICE_STARTUP_TIME=10
 export SERVICE_START_ATTEMPTS=3
 
 # Root S3 folder
-export S3_ROOT=s3://<bucket>/<folder>
+export S3_ROOT=s3://irudyak-test/CassandraSummit2016
 
 # S3 folder for downloads. You should put here ignite load tests jar archive
 # (you can also download here other required artifacts like Cassandra, Ignite and etc)
-export S3_DOWNLOADS=$S3_ROOT/test
+export S3_DOWNLOADS=$S3_ROOT/downloads
 
 # S3 root system folders where to store all infrastructure info
-export S3_SYSTEM=$S3_ROOT/test1
+export S3_SYSTEM=$S3_ROOT/system
 
 # S3 system folders to store cluster specific info
 export S3_CASSANDRA_SYSTEM=$S3_SYSTEM/cassandra
@@ -82,7 +82,7 @@ export S3_CASSANDRA_FIRST_NODE_LOCK=$S3_CASSANDRA_SYSTEM/first-node-lock
 export S3_CASSANDRA_NODES_JOIN_LOCK=$S3_CASSANDRA_SYSTEM/join-lock
 
 # Ignite related settings
-export IGNITE_DOWNLOAD_URL=$S3_DOWNLOADS/apache-ignite-fabric-1.7.0-SNAPSHOT-bin.zip
+export IGNITE_DOWNLOAD_URL=$S3_DOWNLOADS/apache-ignite-fabric-1.8.0-SNAPSHOT-bin.zip
 export S3_IGNITE_BOOTSTRAP_SUCCESS=$S3_IGNITE_SYSTEM/success
 export S3_IGNITE_BOOTSTRAP_FAILURE=$S3_IGNITE_SYSTEM/failure
 export S3_IGNITE_NODES_DISCOVERY=$S3_IGNITE_SYSTEM/discovery
@@ -90,7 +90,7 @@ export S3_IGNITE_FIRST_NODE_LOCK=$S3_IGNITE_SYSTEM/first-node-lock
 export S3_IGNITE_NODES_JOIN_LOCK=$S3_IGNITE_SYSTEM/i-join-lock
 
 # Tests related settings
-export TESTS_PACKAGE_DONLOAD_URL=$S3_DOWNLOADS/ignite-cassandra-tests-1.7.0-SNAPSHOT.zip
+export TESTS_PACKAGE_DONLOAD_URL=$S3_DOWNLOADS/ignite-cassandra-tests-1.8.0-SNAPSHOT.zip
 export S3_TESTS_TRIGGER=$S3_SYSTEM/tests-trigger
 export S3_TESTS_NODES_DISCOVERY=$S3_TESTS_SYSTEM/discovery
 export S3_TESTS_SUCCESS=$S3_TESTS_SYSTEM/success

@@ -47,8 +47,8 @@ import java.util.*;
 public class CassandraSummit2016Test {
 
     private static final String SERVER_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-server-config.xml";
-    //private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml";
-    private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-remote-client-config.xml";
+    private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml";
+    //private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-remote-client-config.xml";
 
     /** */
     private static final Logger LOGGER = Logger.getLogger(CassandraSummit2016Test.class.getName());
@@ -141,6 +141,20 @@ public class CassandraSummit2016Test {
         }
     }
 
+    @Test
+    public void serverLightTest() {
+        try (Ignite ignite = Ignition.start(SERVER_CONF)) {
+
+            while (true) {
+                try {
+                    Thread.sleep(10000);
+                    System.out.println("SERVER IS RUNNING");
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
+
     /** */
     @Test
     public void clientTest() {
@@ -152,7 +166,7 @@ public class CassandraSummit2016Test {
             Connection conn = DriverManager.getConnection("jdbc:ignite:cfg://file:///D:/Projects/ignite/modules/cassandra/src/test/resources/" + CLIENT_CONF);
 
             // Query names of all people.
-            ResultSet rs = conn.createStatement().executeQuery("select * from Product");
+            ResultSet rs = conn.createStatement().executeQuery("select * from \"product\".Product");
 
             while (rs.next()) {
                 String str = rs.getString(1);

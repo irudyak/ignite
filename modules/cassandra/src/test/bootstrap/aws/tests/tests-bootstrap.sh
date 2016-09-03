@@ -28,7 +28,7 @@ AWS_CLI_DOWNLOAD_URL=https://s3.amazonaws.com/aws-cli/awscli-bundle.zip
 JDK_DOWNLOAD_URL=http://download.oracle.com/otn-pub/java/jdk/8u77-b03/jdk-8u77-linux-x64.tar.gz
 
 # URL to download Ignite-Cassandra tests package - you should previously package and upload it to this place
-TESTS_PACKAGE_DONLOAD_URL=s3://<bucket>/<folder>/ignite-cassandra-tests-<version>.zip
+TESTS_PACKAGE_DONLOAD_URL=s3://irudyak-test/CassandraSummit2016/downloads/ignite-cassandra-tests-1.8.0-SNAPSHOT.zip
 
 # Terminates script execution and upload logs to S3
 terminate()
@@ -249,7 +249,7 @@ setupTestsPackage()
     echo "----------------------------------------------------------------------------------------"
     printInstanceInfo
     echo "----------------------------------------------------------------------------------------"
-    tagInstance
+    #tagInstance
     bootstrapGangliaAgent "test" 8643
 
     ###################################################
@@ -312,6 +312,6 @@ cmd="/opt/ignite-cassandra-tests/bootstrap/aws/tests/tests-manager.sh"
 
 #sudo -u ignite -g ignite sh -c "$cmd > /opt/ignite-cassandra-tests/tests-manager" &
 
-$cmd > /opt/ignite-cassandra-tests/logs/tests-manager.log &
+#$cmd > /opt/ignite-cassandra-tests/logs/tests-manager.log &
 
 terminate

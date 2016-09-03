@@ -67,8 +67,8 @@
                     <property name="writeThrough" value="true"/>
                     <property name="writeBehindEnabled" value="true"/>
                     <property name="swapEnabled" value="false"/>
-                    <property name="startSize" value="1048576"/>
-                    <property name="cacheMode" value="PARTITIONED"/>
+                    <property name="startSize" value="1000000"/>
+                    <property name="cacheMode" value="REPLICATED"/>
                     <property name="cacheStoreFactory">
                         <bean class="org.apache.ignite.cache.store.cassandra.CassandraCacheStoreFactory">
                             <property name="dataSource" ref="cassandraAdminDataSource"/>
@@ -113,12 +113,12 @@
                     <property name="writeThrough" value="true"/>
                     <property name="writeBehindEnabled" value="true"/>
                     <property name="swapEnabled" value="false"/>
-                    <property name="startSize" value="10048576"/>
+                    <property name="startSize" value="1000000"/>
                     <property name="cacheMode" value="PARTITIONED"/>
                     <property name="offHeapMaxMemory" value="2221225472"/>
                     <property name="evictionPolicy">
                         <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">
-                            <property name="maxSize" value="10000000"/>
+                            <property name="maxSize" value="1000000"/>
                         </bean>
                     </property>
                     <property name="cacheStoreFactory">
@@ -166,12 +166,12 @@
                     <property name="name" value="order_history"/>
                     <property name="readThrough" value="true"/>
                     <property name="swapEnabled" value="false"/>
-                    <property name="startSize" value="10048576"/>
+                    <property name="startSize" value="1000000"/>
                     <property name="cacheMode" value="PARTITIONED"/>
                     <property name="offHeapMaxMemory" value="2221225472"/>
                     <property name="evictionPolicy">
                         <bean class="org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy">
-                            <property name="maxSize" value="10000000"/>
+                            <property name="maxSize" value="1000000"/>
                         </bean>
                     </property>
                     <property name="cacheStoreFactory">
