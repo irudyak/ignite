@@ -20,13 +20,14 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
-        http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util.xsd">
 
     <!-- Cassandra connection settings -->
     <util:list id="contactPoints" value-type="java.lang.String">
-        <value>ecsb00100a6e.epam.com</value>
-        <value>ecsb00100a87.epam.com</value>
-        <value>ecsb00100a8f.epam.com</value>
+        <value>ip-172-31-5-15.us-west-2.compute.internal</value>
+        <value>ip-172-31-5-12.us-west-2.compute.internal</value>
     </util:list>
 
     <bean id="cassandraAdminDataSource" class="org.apache.ignite.cache.store.cassandra.datasource.DataSource">
@@ -54,7 +55,7 @@
 
     <!-- Ignite configuration -->
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
-		<property name="clientMode" value="true"/>
+        <property name="clientMode" value="true"/>
 
         <property name="cacheConfiguration">
             <list>
@@ -221,7 +222,7 @@
                     <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder">
                         <property name="addresses">
                             <list>
-                                <value>ecsb00100a92.epam.com</value>
+                                <value>ip-172-31-5-7.us-west-2.compute.internal</value>
                             </list>
                         </property>
                     </bean>
