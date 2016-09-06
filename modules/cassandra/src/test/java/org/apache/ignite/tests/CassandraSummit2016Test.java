@@ -47,8 +47,8 @@ import java.util.*;
 public class CassandraSummit2016Test {
 
     private static final String SERVER_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-server-config.xml";
-    private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml";
-    //private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-remote-client-config.xml";
+    //private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-client-config.xml";
+    private static final String CLIENT_CONF = "org/apache/ignite/tests/persistence/summit2016/ignite-remote-client-config.xml";
 
     /** */
     private static final Logger LOGGER = Logger.getLogger(CassandraSummit2016Test.class.getName());
@@ -157,7 +157,7 @@ public class CassandraSummit2016Test {
 
     /** */
     @Test
-    public void clientTest() {
+    public void jdbcTest() {
         try {
             // Register JDBC driver.
             Class.forName("org.apache.ignite.IgniteJdbcDriver");
@@ -179,72 +179,17 @@ public class CassandraSummit2016Test {
     }
 
     @Test
-    public void clientTest1() {
-        try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
-            IgniteCache<Long, Product> productCache = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
-            IgniteCache<Long, ProductOrder> orderCache = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
-
-            Affinity affinity = ignite.affinity("product");
-            int[] partitions = affinity.allPartitions(ignite.cluster().localNode());
-            for (int i = 0; i < partitions.length; i++) {
-                System.out.println("Partition: " + i);
-
-            }
-
-
-            SqlQuery sql = new SqlQuery(Product.class, "price > 50");
-
-            try (QueryCursor<Cache.Entry<Long, Product>> cursor = productCache.query(sql)) {
-                for (Cache.Entry<Long, Product> e : cursor)
-                    System.out.println(e.getValue().toString());
-            }
-
-            System.out.println("========================================================================");
-
-            SqlFieldsQuery sql1 = new SqlFieldsQuery("select id, type, title, description, price from Product where price > 0");
-
-            try (QueryCursor<List<?>> cursor = productCache.query(sql1)) {
-                for (List<?> row : cursor)
-                    System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2) + ", " + row.get(3) + ", " + row.get(4));
-            }
-
-            System.out.println("========================================================================");
-
-            SqlFieldsQuery sql2 = new SqlFieldsQuery("select p.id, o.id, o.amount, o.price, o.date " +
-                    "from Product as p, \"order\".ProductOrder as o where p.id = o.productId order by p.id");
-
-            sql2.setDistributedJoins(true);
-
-            try (QueryCursor<List<?>> cursor = productCache.query(sql2)) {
-                for (List<?> row : cursor)
-                    System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2) + ", " + row.get(3) + ", " + row.get(4));
-            }
-
-            System.out.println("========================================================================");
-
-            SqlFieldsQuery sql3 = new SqlFieldsQuery("select p.id, sum(o.amount), sum(o.price) " +
-                    "from Product as p, \"order\".ProductOrder as o where p.id = o.productId group by p.id order by 3 desc limit 2");
-
-            sql3.setDistributedJoins(true);
-
-            try (QueryCursor<List<?>> cursor = productCache.query(sql3)) {
-                for (List<?> row : cursor)
-                    System.out.println(row.get(0) + ", " + row.get(1) + ", " + row.get(2));
-            }
-        }
-        catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Test
     public void warmup() {
-        String query = "select * from summit2016.order_history where daymillisecond='09/02/2016/${ignite_partition}'";
+        String query = "select * from summit2016.order_history where daymillisecond='08/07/2016/${ignite_partition}'";
 
         try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, ProductOrder> orderHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
+            long start = System.currentTimeMillis();
             orderHistory.loadCache(null, new String[] {query});
-            System.out.println("LOADED");
+            long duration = (System.currentTimeMillis() - start) / 1000;
+            System.out.println("--------------------------------------");
+            System.out.println("Warmup duration: " + duration + " sec");
+            System.out.println("--------------------------------------");
         }
         catch (Throwable e) {
             e.printStackTrace();
@@ -257,9 +202,14 @@ public class CassandraSummit2016Test {
             IgniteCache<Long, Product> products = ignite.getOrCreateCache(new CacheConfiguration<Long, Product>("product"));
             IgniteCache<Long, ProductOrder> orders = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
             IgniteCache<Long, ProductOrder> ordersHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
+            long start = System.currentTimeMillis();
             products.clear();
             orders.clear();
             ordersHistory.clear();
+            long duration = (System.currentTimeMillis() - start) / 1000;
+            System.out.println("--------------------------------------");
+            System.out.println("Clean duration: " + duration + " sec");
+            System.out.println("--------------------------------------");
         }
         catch (Throwable e) {
             e.printStackTrace();

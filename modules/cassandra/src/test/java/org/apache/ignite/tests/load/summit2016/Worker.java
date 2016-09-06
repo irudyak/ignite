@@ -23,8 +23,13 @@ import org.apache.ignite.cache.store.cassandra.common.SystemHelper;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.tests.utils.TestsHelper;
 import org.apache.log4j.Logger;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.text.SimpleDateFormat;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Worker thread abstraction to be inherited by specific load test implementation
@@ -155,6 +160,10 @@ public abstract class Worker extends Thread {
 
     protected abstract Object[] nextKeyValue();
 
+    protected Map nextKeyValueBatch() {
+        throw new NotImplementedException();
+    }
+
     protected boolean continueExecution() {
         return System.currentTimeMillis() - testStartTime <
                 TestsHelper.getLoadTestsWarmupPeriod() + TestsHelper.getLoadTestsExecutionTime();
@@ -185,11 +194,18 @@ public abstract class Worker extends Thread {
                     log.info("Warm up period completed");
                 }
 
-                Object[] keyVal = nextKeyValue();
 
                 try {
-                    igniteCache.put(keyVal[0], keyVal[1]);
-                    updateMetrics(1);
+                    if (!batchMode()) {
+                        Object[] keyVal = nextKeyValue();
+                        igniteCache.put(keyVal[0], keyVal[1]);
+                        updateMetrics(1);
+                    }
+                    else {
+                        Map batch = nextKeyValueBatch();
+                        igniteCache.putAll(batch);
+                        updateMetrics(batch.size());
+                    }
                 }
                 catch (Throwable e) {
                     log.error("Failed to perform single operation", e);
@@ -203,6 +219,10 @@ public abstract class Worker extends Thread {
             warmupFinishTime = warmupFinishTime != 0 ? warmupFinishTime : System.currentTimeMillis();
             finishTime = System.currentTimeMillis();
         }
+    }
+
+    protected boolean batchMode() {
+        return false;
     }
 
     /** */
@@ -249,8 +269,8 @@ public abstract class Worker extends Thread {
 
     /** */
     private void reportStatistics() {
-        // statistics should be reported only every 30 seconds
-        if (System.currentTimeMillis() - statReportedTime < 30000)
+        // statistics should be reported only every 10 seconds
+        if (System.currentTimeMillis() - statReportedTime < 10000)
             return;
 
         statReportedTime = System.currentTimeMillis();

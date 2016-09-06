@@ -143,9 +143,6 @@
                                         <bean class="org.apache.ignite.cache.QueryIndex">
                                             <constructor-arg value="productId"/>
                                         </bean>
-                                        <bean class="org.apache.ignite.cache.QueryIndex">
-                                            <constructor-arg value="date"/>
-                                        </bean>
                                     </list>
                                 </property>
                             </bean>
@@ -197,9 +194,6 @@
                                         </bean>
                                         <bean class="org.apache.ignite.cache.QueryIndex">
                                             <constructor-arg value="productId"/>
-                                        </bean>
-                                        <bean class="org.apache.ignite.cache.QueryIndex">
-                                            <constructor-arg value="date"/>
                                         </bean>
                                     </list>
                                 </property>

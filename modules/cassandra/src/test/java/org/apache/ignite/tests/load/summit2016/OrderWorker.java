@@ -4,14 +4,18 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.store.cassandra.common.SystemHelper;
 import org.apache.ignite.tests.pojos.ProductOrder;
 import org.apache.ignite.tests.utils.TestsHelper;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class OrderWorker extends Worker {
     private static final int MIN = TestsHelper.getLoadTestsProductAbsMin();
     private static final int MAX = TestsHelper.getLoadTestsProductAbsMax();
     private static final String HOST_PREFIX;
+    private static final int BATCH_SIZE = TestsHelper.getBulkOperationSize();
 
     static {
         String[] parts = SystemHelper.HOST_IP.split("\\.");
@@ -24,6 +28,7 @@ public class OrderWorker extends Worker {
 
     private final Random RANDOM = new Random(System.currentTimeMillis());
     private final int workerNumber;
+    private Map batch = new HashMap(BATCH_SIZE);
 
     public OrderWorker(Ignite ignite, long startPosition, long endPosition, int workerNumber) {
         super(ignite, startPosition, endPosition);
@@ -41,7 +46,32 @@ public class OrderWorker extends Worker {
     }
 
     @Override
+    protected boolean batchMode() {
+        return true;
+    }
+
+    @Override
     protected Object[] nextKeyValue() {
+        ProductOrder order = nextOrder();
+
+        //log.info("New order: " + order.getId() + " / " + order.getProductId());
+
+        return new Object[]{order.getId(), order};
+    }
+
+    @Override
+    protected Map nextKeyValueBatch() {
+        batch.clear();
+
+        for (int i = 0; i < BATCH_SIZE; i++) {
+            ProductOrder order = nextOrder();
+            batch.put(order.getId(), order);
+        }
+
+        return batch;
+    }
+
+    private ProductOrder nextOrder() {
         int productId = MIN + RANDOM.nextInt(MAX - MIN + 1);
         productId = productId > MAX ? MAX : productId;
 
@@ -54,8 +84,8 @@ public class OrderWorker extends Worker {
 
         ProductOrder order = TestsHelper.generateRandomOrder(productId, orderId, cl.getTime());
 
-        log.info("New order: " + orderId + " / " + productId);
+        //log.info("New order: " + orderId + " / " + productId);
 
-        return new Object[]{orderId, order};
+        return order;
     }
 }

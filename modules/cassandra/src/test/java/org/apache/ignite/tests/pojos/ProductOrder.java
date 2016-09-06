@@ -54,7 +54,7 @@ public class ProductOrder {
         this.id = id;
     }
 
-    @QuerySqlField(index = true, name="dqwedew")
+    @QuerySqlField(index = true)
     public long getId() {
         return id;
     }
@@ -72,7 +72,7 @@ public class ProductOrder {
         this.date = date;
     }
 
-    @QuerySqlField(index = true)
+    @QuerySqlField
     public Date getDate() {
         return date;
     }
