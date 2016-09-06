@@ -184,9 +184,13 @@ public class CassandraSummit2016Test {
 
         try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, ProductOrder> orderHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
+
             long start = System.currentTimeMillis();
+
             orderHistory.loadCache(null, new String[] {query});
+
             long duration = (System.currentTimeMillis() - start) / 1000;
+
             System.out.println("--------------------------------------");
             System.out.println("Warmup duration: " + duration + " sec");
             System.out.println("--------------------------------------");
