@@ -1,0 +1,40 @@
+select count(*) from "product".Product
+select count(*) from "order".ProductOrder
+select count(*) from "order_history".ProductOrder
+
+-------------------
+
+select * from "order".ProductOrder where id=147327174284210
+
+-------------------
+
+select p.id as product_id, sum(o.amount) as amount, sum(o.price) as price
+from "product".Product as p, "order".ProductOrder as o
+where p.id = o.productId
+group by p.id
+order by sum(o.amount) desc
+limit 10
+
+-------------------
+
+select h.productid, sum(o.amount - h.amount) as amount, sum(o.price - h.price) as price
+from "order_history".ProductOrder h, "order".ProductOrder o
+where h.productid = o.productid
+group by h.productid
+order by 3 desc
+limit 10
+
+-------------
+
+select ord.productid, sum(ord.amount), sum(ord.price)
+
+from  "order".ProductOrder as ord,
+(select productid, sum(amount) as amount, sum(price) as price
+from "order_history".ProductOrder
+group by productid order by 3 desc limit 10) as hist
+
+where ord.productid = hist.productid
+
+group by ord.productid
+
+limit 10
