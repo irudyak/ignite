@@ -207,7 +207,7 @@ public class CassandraSummit2016Test {
             IgniteCache<Long, ProductOrder> orders = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order"));
             IgniteCache<Long, ProductOrder> ordersHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
             long start = System.currentTimeMillis();
-            products.clear();
+            //products.clear();
             orders.clear();
             ordersHistory.clear();
             long duration = (System.currentTimeMillis() - start) / 1000;
