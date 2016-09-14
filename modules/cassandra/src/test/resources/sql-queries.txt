@@ -21,7 +21,7 @@ select h.productid, sum(o.amount - h.amount) as amount, sum(o.price - h.price) a
 from "order_history".ProductOrder h, "order".ProductOrder o
 where h.productid = o.productid
 group by h.productid
-order by 3 desc
+order by sum(o.amount - h.amount) desc
 limit 10
 
 -------------

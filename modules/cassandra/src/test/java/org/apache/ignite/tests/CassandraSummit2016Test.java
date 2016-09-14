@@ -180,7 +180,7 @@ public class CassandraSummit2016Test {
 
     @Test
     public void warmup() {
-        String query = "select * from summit2016.order_history where daymillisecond='08/07/2016/${ignite_partition}'";
+        String query = "select * from summit2016.order_history where daymillisecond='08/13/2016/${ignite_partition}'";
 
         try (Ignite ignite = Ignition.start(CLIENT_CONF)) {
             IgniteCache<Long, ProductOrder> orderHistory = ignite.getOrCreateCache(new CacheConfiguration<Long, ProductOrder>("order_history"));
