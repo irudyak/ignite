@@ -17,6 +17,9 @@
 
 package org.apache.ignite.cache.store.cassandra.common;
 
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.regex.Pattern;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Session;
@@ -24,10 +27,8 @@ import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.ReadTimeoutException;
-
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.regex.Pattern;
+import org.apache.ignite.cache.store.CacheStoreSession;
+import org.apache.ignite.cache.store.cassandra.persistence.PersistenceController;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -43,6 +44,9 @@ public class CassandraHelper {
     /** Cassandra error message if trying to create table inside nonexistent keyspace. */
     private static final Pattern KEYSPACE_EXIST_ERROR3 = Pattern.compile("Error preparing query, got ERROR INVALID: " +
             "Keyspace [0-9a-zA-Z_]+ does not exist");
+
+    /** Cassandra error message if specified keyspace doesn't exist. */
+    private static final Pattern KEYSPACE_EXIST_ERROR4 = Pattern.compile("Keyspace [0-9a-zA-Z_]+ doesn't exist");
 
     /** Cassandra error message if specified table doesn't exist. */
     private static final Pattern TABLE_EXIST_ERROR1 = Pattern.compile("unconfigured table [0-9a-zA-Z_]+");
@@ -78,7 +82,9 @@ public class CassandraHelper {
         while (e != null) {
             if (e instanceof InvalidQueryException &&
                 (KEYSPACE_EXIST_ERROR1.matcher(e.getMessage()).matches() ||
-                    KEYSPACE_EXIST_ERROR2.matcher(e.getMessage()).matches()))
+                    KEYSPACE_EXIST_ERROR2.matcher(e.getMessage()).matches() ||
+                    KEYSPACE_EXIST_ERROR3.matcher(e.getMessage()).matches() ||
+                    KEYSPACE_EXIST_ERROR4.matcher(e.getMessage()).matches()))
                 return true;
 
             e = e.getCause();
@@ -171,6 +177,18 @@ public class CassandraHelper {
         DataType.Name t2 = PropertyMappingHelper.getCassandraType(type2);
 
         return t1 != null && t2 != null && t1.equals(t2);
+    }
+
+    /**
+     * Returns table name to use for all Cassandra based operations (READ/WRITE/DELETE).
+     *
+     * @param controller used in current operation with cassandra.
+     * @param storeSession session of ignite store.
+     * @return Table name.
+     */
+    public static String cassandraTableName(PersistenceController controller, CacheStoreSession storeSession) {
+        return controller.getPersistenceSettings().getTable() != null ?
+            controller.getPersistenceSettings().getTable() : storeSession.cacheName().toLowerCase();
     }
 }
 

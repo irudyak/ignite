@@ -17,9 +17,9 @@
 
 package org.apache.ignite.cache.store.cassandra.session;
 
-import com.datastax.driver.core.Row;
 import java.util.HashSet;
 import java.util.Set;
+import com.datastax.driver.core.Row;
 
 /**
  * Implementation of the {@link org.apache.ignite.cache.store.cassandra.session.BatchExecutionAssistant}.
@@ -27,9 +27,20 @@ import java.util.Set;
  * @param <R> Type of the result returned from batch operation
  * @param <V> Type of the value used in batch operation
  */
-public abstract class GenericBatchExecutionAssistant<R, V> implements BatchExecutionAssistant<R, V> {
+public abstract class GenericBatchExecutionAssistant<R, V> extends GenericAssistant
+    implements BatchExecutionAssistant<R, V> {
     /** Identifiers of already processed objects. */
     private Set<Integer> processed = new HashSet<>();
+
+    /**
+     * Creates assistant with given settings.
+     *
+     * @param tableExistenceRequired is existing table needed
+     * @param operationName name of operation
+     */
+    public GenericBatchExecutionAssistant(boolean tableExistenceRequired, String operationName) {
+        super(tableExistenceRequired, operationName);
+    }
 
     /** {@inheritDoc} */
     @Override public void process(Row row, int seqNum) {
@@ -54,11 +65,6 @@ public abstract class GenericBatchExecutionAssistant<R, V> implements BatchExecu
     /** {@inheritDoc} */
     @Override public R processedData() {
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean tableExistenceRequired() {
-        return false;
     }
 
     /**
