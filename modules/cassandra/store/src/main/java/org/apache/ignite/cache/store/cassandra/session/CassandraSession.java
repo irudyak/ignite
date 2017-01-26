@@ -17,10 +17,9 @@
 
 package org.apache.ignite.cache.store.cassandra.session;
 
-import org.apache.ignite.cache.store.cassandra.session.transaction.Mutation;
-
 import java.io.Closeable;
 import java.util.List;
+import org.apache.ignite.cache.store.cassandra.session.transaction.Mutation;
 
 /**
  * Wrapper around Cassandra driver session, to automatically handle:
@@ -60,6 +59,19 @@ public interface CassandraSession extends Closeable {
      * @param assistant execution assistance to perform the main operation logic.
      */
     public void execute(BatchLoaderAssistant assistant);
+
+    /**
+     * Executes operation to load bunch of records and to process each resulting row.
+     * @param assistant execution assistance to perform the main operation logic.
+     */
+    public void executeAllRows(ExecutionAssistant<Void> assistant);
+
+    /**
+     * Clears specified table.
+     * @param keyspace where table is located.
+     * @param table to truncate.
+     */
+    public void truncate(String keyspace, String table);
 
     /**
      * Executes all the mutations performed withing Ignite transaction against Cassandra database.

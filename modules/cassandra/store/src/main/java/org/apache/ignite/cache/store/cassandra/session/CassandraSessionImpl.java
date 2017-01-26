@@ -17,6 +17,12 @@
 
 package org.apache.ignite.cache.store.cassandra.session;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
@@ -30,12 +36,6 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.AlreadyExistsException;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.querybuilder.Batch;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -62,6 +62,9 @@ public class CassandraSessionImpl implements CassandraSession {
     /** Timeout increment for CQL query execution attempts. */
     private static final int CQL_ATTEMPTS_TIMEOUT_INCREMENT = 100;
 
+    /** Storage for the session prepared statements */
+    private static final Map<String, PreparedStatement> sesStatements = new HashMap<>();
+
     /** Cassandra cluster builder. */
     private volatile Cluster.Builder builder;
 
@@ -70,9 +73,6 @@ public class CassandraSessionImpl implements CassandraSession {
 
     /** Number of references to Cassandra driver session (for multithreaded environment). */
     private volatile int refCnt;
-
-    /** Storage for the session prepared statements */
-    private static final Map<String, PreparedStatement> sesStatements = new HashMap<>();
 
     /** Number of records to immediately fetch in CQL statement execution. */
     private Integer fetchSize;
@@ -114,7 +114,8 @@ public class CassandraSessionImpl implements CassandraSession {
     @Override public <V> V execute(ExecutionAssistant<V> assistant) {
         int attempt = 0;
         Throwable error = null;
-        String errorMsg = "Failed to execute Cassandra CQL statement: " + assistant.getStatement();
+        String errorMsg = "Failed to execute Cassandra CQL statement: " + assistant.getStatement() +
+            " in operation " + assistant.operationName();
 
         RandomSleeper sleeper = newSleeper();
 
@@ -126,7 +127,7 @@ public class CassandraSessionImpl implements CassandraSession {
 
                 if (attempt != 0) {
                     log.warning("Trying " + (attempt + 1) + " attempt to execute Cassandra CQL statement: " +
-                            assistant.getStatement());
+                        assistant.getStatement());
                 }
 
                 try {
@@ -200,8 +201,8 @@ public class CassandraSessionImpl implements CassandraSession {
             while (attempt < CQL_EXECUTION_ATTEMPTS_COUNT) {
                 if (attempt != 0) {
                     log.warning("Trying " + (attempt + 1) + " attempt to execute Cassandra batch " +
-                            assistant.operationName() + " operation to process rest " +
-                            (dataSize - assistant.processedCount()) + " of " + dataSize + " elements");
+                        assistant.operationName() + " operation to process rest " +
+                        (dataSize - assistant.processedCount()) + " of " + dataSize + " elements");
                 }
 
                 //clean errors info before next communication with Cassandra
@@ -502,6 +503,75 @@ public class CassandraSessionImpl implements CassandraSession {
     }
 
     /** {@inheritDoc} */
+    @Override public void executeAllRows(ExecutionAssistant<Void> assistant) {
+        int attempt = 0;
+        Throwable error = null;
+        String errorMsg = "Failed to execute Cassandra CQL statement: " + assistant.getStatement() +
+            " in operation " + assistant.operationName();
+        RandomSleeper sleeper = newSleeper();
+        incrementSessionRefs();
+        try {
+            while (attempt < CQL_EXECUTION_ATTEMPTS_COUNT) {
+                error = null;
+                if (attempt != 0) {
+                    log.warning("Trying " + (attempt + 1) + " attempt to execute Cassandra CQL statement: " +
+                        assistant.getStatement());
+                }
+                try {
+                    PreparedStatement preparedSt = prepareStatement(assistant.getTable(), assistant.getStatement(),
+                        assistant.getPersistenceSettings(), assistant.tableExistenceRequired());
+                    if (preparedSt == null) {
+                        return;
+                    }
+                    Statement statement = tuneStatementExecutionOptions(assistant.bindStatement(preparedSt));
+                    ResultSet res = session().execute(statement);
+                    if (res != null) {
+                        for (Row row : res) {
+                            assistant.process(row);
+                        }
+                    }
+                    return;
+                }
+                catch (Throwable e) {
+                    error = e;
+                    if (CassandraHelper.isTableAbsenceError(e)) {
+                        if (!assistant.tableExistenceRequired()) {
+                            log.warning(errorMsg, e);
+                            return;
+                        }
+                        handleTableAbsenceError(assistant.getTable(), assistant.getPersistenceSettings());
+                    }
+                    else if (CassandraHelper.isHostsAvailabilityError(e)) {
+                        handleHostsAvailabilityError(e, attempt, errorMsg);
+                    }
+                    else if (CassandraHelper.isPreparedStatementClusterError(e)) {
+                        handlePreparedStatementClusterError(e);
+                    }
+                    else {
+
+                        // For an error which we don't know how to handle, we will not try next attempts and terminate.
+                        throw new IgniteException(errorMsg, e);
+                    }
+                }
+
+                sleeper.sleep();
+
+                attempt++;
+            }
+        }
+        catch (Throwable e) {
+            error = e;
+        }
+        finally {
+            decrementSessionRefs();
+        }
+
+        log.error(errorMsg, error);
+
+        throw new IgniteException(errorMsg, error);
+    }
+
+    /** {@inheritDoc} */
     @Override public synchronized void close() throws IOException {
         if (decrementSessionRefs() == 0 && ses != null) {
             SessionPool.put(this, ses);
@@ -636,18 +706,22 @@ public class CassandraSessionImpl implements CassandraSession {
      * @param settings Persistence settings.
      */
     private void createKeyspace(KeyValuePersistenceSettings settings) {
+        if (settings.getKeyspace() == null || settings.getKeyspace().trim().isEmpty()) {
+            throw new IllegalArgumentException("Keyspace name should be specified");
+        }
         int attempt = 0;
         Throwable error = null;
         String errorMsg = "Failed to create Cassandra keyspace '" + settings.getKeyspace() + "'";
+        String statement = settings.getKeyspaceDDLStatement();
 
         while (attempt < CQL_EXECUTION_ATTEMPTS_COUNT) {
             try {
                 log.info("-----------------------------------------------------------------------");
                 log.info("Creating Cassandra keyspace '" + settings.getKeyspace() + "'");
                 log.info("-----------------------------------------------------------------------\n\n" +
-                    settings.getKeyspaceDDLStatement() + "\n");
+                    statement + "\n");
                 log.info("-----------------------------------------------------------------------");
-                session().execute(settings.getKeyspaceDDLStatement());
+                session().execute(statement);
                 log.info("Cassandra keyspace '" + settings.getKeyspace() + "' was successfully created");
                 return;
             }
@@ -710,6 +784,36 @@ public class CassandraSessionImpl implements CassandraSession {
 
                 error = e;
             }
+
+            attempt++;
+        }
+
+        throw new IgniteException(errorMsg, error);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void truncate(String keyspace, String table) {
+        String fullName = keyspace + "." + table;
+        int attempt = 0;
+        Throwable error = null;
+        String errorMsg = "Failed to drop Cassandra table '" + fullName + "'";
+        RandomSleeper sleeper = newSleeper();
+        String statement = "truncate " + fullName;
+        while (attempt < CQL_EXECUTION_ATTEMPTS_COUNT) {
+            try {
+                session().execute(statement);
+                return;
+            }
+            catch (Throwable e) {
+                if (CassandraHelper.isHostsAvailabilityError(e)) {
+                    handleHostsAvailabilityError(e, attempt, errorMsg);
+                }
+                else {
+                    throw new IgniteException(errorMsg, e);
+                }
+                error = e;
+            }
+            sleeper.sleep();
 
             attempt++;
         }
@@ -819,12 +923,12 @@ public class CassandraSessionImpl implements CassandraSession {
                 // Oooops... I am not the first thread who tried to handle table absence problem.
                 if (hndNum != 0) {
                     log.warning("Table " + tableFullName + " absence problem detected. " +
-                            "Another thread already fixed it.");
+                        "Another thread already fixed it.");
                     return;
                 }
 
                 log.warning("Table " + tableFullName + " absence problem detected. " +
-                        "Trying to create table.");
+                    "Trying to create table.");
 
                 IgniteException error = new IgniteException("Failed to create Cassandra table " + tableFullName);
 
@@ -871,7 +975,8 @@ public class CassandraSessionImpl implements CassandraSession {
             synchronized (prepStatementHandlersCnt) {
                 // Oooops... I am not the first thread who tried to handle prepared statement problem.
                 if (hndNum != 0) {
-                    log.warning("Prepared statement cluster error detected, another thread already fixed the problem", e);
+                    log.warning("Prepared statement cluster error detected, another thread already fixed the problem",
+                        e);
                     return;
                 }
 
@@ -919,7 +1024,7 @@ public class CassandraSessionImpl implements CassandraSession {
         }
 
         log.warning("Host availability problem detected, CQL execution attempt " + (attempt + 1) + ", " +
-                "sleeping extra " + CQL_EXECUTION_ATTEMPT_MAX_TIMEOUT + " milliseconds", e);
+            "sleeping extra " + CQL_EXECUTION_ATTEMPT_MAX_TIMEOUT + " milliseconds", e);
 
         try {
             Thread.sleep(CQL_EXECUTION_ATTEMPT_MAX_TIMEOUT);
@@ -937,7 +1042,7 @@ public class CassandraSessionImpl implements CassandraSession {
      */
     private RandomSleeper newSleeper() {
         return new RandomSleeper(CQL_EXECUTION_ATTEMPT_MIN_TIMEOUT,
-                CQL_EXECUTION_ATTEMPT_MAX_TIMEOUT,
-                CQL_ATTEMPTS_TIMEOUT_INCREMENT, log);
+            CQL_EXECUTION_ATTEMPT_MAX_TIMEOUT,
+            CQL_ATTEMPTS_TIMEOUT_INCREMENT, log);
     }
 }

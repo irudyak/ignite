@@ -17,17 +17,13 @@
 
 package org.apache.ignite.cache.store.cassandra.persistence;
 
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.store.cassandra.common.PropertyMappingHelper;
 import org.apache.ignite.cache.store.cassandra.serializer.Serializer;
@@ -47,29 +43,8 @@ public class PersistenceController {
     /** List of value unique POJO fields (skipping aliases pointing to the same Cassandra table column). */
     private final List<PojoField> valUniquePojoFields;
 
-    /** CQL statement template to insert row into Cassandra table. */
-    private final String writeStatementTempl;
-
-    /** CQL statement template to delete row from Cassandra table. */
-    private final String delStatementTempl;
-
-    /** CQL statement template to select value fields from Cassandra table. */
-    private final String loadStatementTempl;
-
-    /** CQL statement template to select key/value fields from Cassandra table. */
-    private final String loadWithKeyFieldsStatementTempl;
-
-    /** CQL statements to insert row into Cassandra table. */
-    private volatile Map<String, String> writeStatements = new HashMap<>();
-
-    /** CQL statements to delete row from Cassandra table. */
-    private volatile Map<String, String> delStatements = new HashMap<>();
-
-    /** CQL statements to select value fields from Cassandra table. */
-    private volatile Map<String, String> loadStatements = new HashMap<>();
-
-    /** CQL statements to select key/value fields from Cassandra table. */
-    private volatile Map<String, String> loadWithKeyFieldsStatements = new HashMap<>();
+    /** Holds CQL statements */
+    private final CassandraStatements cassandraStatements;
 
     /**
      * Constructs persistence controller from Ignite cache persistence settings.
@@ -82,12 +57,7 @@ public class PersistenceController {
 
         persistenceSettings = settings;
 
-        String[] loadStatements = prepareLoadStatements();
-
-        loadWithKeyFieldsStatementTempl = loadStatements[0];
-        loadStatementTempl = loadStatements[1];
-        writeStatementTempl = prepareWriteStatement();
-        delStatementTempl = prepareDeleteStatement();
+        cassandraStatements = new CassandraStatements(persistenceSettings);
 
         keyUniquePojoFields = settings.getKeyPersistenceSettings().cassandraUniqueFields();
 
@@ -138,7 +108,7 @@ public class PersistenceController {
      * @return CQL statement.
      */
     public String getWriteStatement(String table) {
-        return getStatement(table, writeStatementTempl, writeStatements);
+        return cassandraStatements.getWriteStatement(table);
     }
 
     /**
@@ -148,7 +118,7 @@ public class PersistenceController {
      * @return CQL statement.
      */
     public String getDeleteStatement(String table) {
-        return getStatement(table, delStatementTempl, delStatements);
+        return cassandraStatements.getDeleteStatement(table);
     }
 
     /**
@@ -160,9 +130,21 @@ public class PersistenceController {
      * @return CQL statement.
      */
     public String getLoadStatement(String table, boolean includeKeyFields) {
-        return includeKeyFields ?
-            getStatement(table, loadWithKeyFieldsStatementTempl, loadWithKeyFieldsStatements) :
-            getStatement(table, loadStatementTempl, loadStatements);
+        return cassandraStatements.getLoadStatement(table, includeKeyFields);
+    }
+
+    /**
+     * Returns CQL statement to select key/value fields from Cassandra table. Please make note that not all
+     * possible combinations of parameters will return query.
+     *
+     * @param table Table name.
+     * @param includeKeyFields whether to include/exclude key fields from the returned row.
+     *
+     * @return CQL statement.
+     */
+    public String getLoadStatement(String table, boolean includeKeyFields, boolean includeValueFields,
+        boolean includeFilter) {
+        return cassandraStatements.getLoadStatement(table, includeKeyFields, includeValueFields, includeFilter);
     }
 
     /**
@@ -185,7 +167,7 @@ public class PersistenceController {
     }
 
     /**
-     * Binds Ignite cache key and value object to {@link com.datastax.driver.core.PreparedStatement}.
+     * Binds Ignite cache key and value object to {@link PreparedStatement}.
      *
      * @param statement statement to which key and value object should be bind.
      * @param key key object.
@@ -229,145 +211,6 @@ public class PersistenceController {
     }
 
     /**
-     * Service method to prepare CQL write statement.
-     *
-     * @return CQL write statement.
-     */
-    private String prepareWriteStatement() {
-        Collection<String> cols = persistenceSettings.getTableColumns();
-
-        StringBuilder colsList = new StringBuilder();
-        StringBuilder questionsList = new StringBuilder();
-
-        for (String column : cols) {
-            if (colsList.length() != 0) {
-                colsList.append(", ");
-                questionsList.append(",");
-            }
-
-            colsList.append("\"").append(column).append("\"");
-            questionsList.append("?");
-        }
-
-        String statement = "insert into \"" + persistenceSettings.getKeyspace() + "\".\"%1$s" +
-            "\" (" + colsList + ") values (" + questionsList + ")";
-
-        if (persistenceSettings.getTTL() != null)
-            statement += " using ttl " + persistenceSettings.getTTL();
-
-        return statement + ";";
-    }
-
-    /**
-     * Service method to prepare CQL delete statement.
-     *
-     * @return CQL write statement.
-     */
-    private String prepareDeleteStatement() {
-        Collection<String> cols = persistenceSettings.getKeyPersistenceSettings().getTableColumns();
-
-        StringBuilder statement = new StringBuilder();
-
-        for (String column : cols) {
-            if (statement.length() != 0)
-                statement.append(" and ");
-
-            statement.append("\"").append(column).append("\"=?");
-        }
-
-        statement.append(";");
-
-        return "delete from \"" + persistenceSettings.getKeyspace() + "\".\"%1$s\" where " + statement;
-    }
-
-    /**
-     * Service method to prepare CQL load statements including and excluding key columns.
-     *
-     * @return array having two CQL statements (including and excluding key columns).
-     */
-    private String[] prepareLoadStatements() {
-        PersistenceSettings settings = persistenceSettings.getKeyPersistenceSettings();
-        boolean pojoStrategy = PersistenceStrategy.POJO == settings.getStrategy();
-        Collection<String> keyCols = settings.getTableColumns();
-        StringBuilder hdrWithKeyFields = new StringBuilder();
-
-
-        for (String column : keyCols) {
-            // omit calculated fields in load statement
-            if (pojoStrategy && settings.getFieldByColumn(column).calculatedField())
-                continue;
-
-            if (hdrWithKeyFields.length() > 0)
-                hdrWithKeyFields.append(", ");
-
-            hdrWithKeyFields.append("\"").append(column).append("\"");
-        }
-
-        settings = persistenceSettings.getValuePersistenceSettings();
-        pojoStrategy = PersistenceStrategy.POJO == settings.getStrategy();
-        Collection<String> valCols = settings.getTableColumns();
-        StringBuilder hdr = new StringBuilder();
-
-        for (String column : valCols) {
-            // omit calculated fields in load statement
-            if (pojoStrategy && settings.getFieldByColumn(column).calculatedField())
-                continue;
-
-            if (hdr.length() > 0)
-                hdr.append(", ");
-
-            hdr.append("\"").append(column).append("\"");
-
-            if (!keyCols.contains(column))
-                hdrWithKeyFields.append(", \"").append(column).append("\"");
-        }
-
-        hdrWithKeyFields.insert(0, "select ");
-        hdr.insert(0, "select ");
-
-        StringBuilder statement = new StringBuilder();
-
-        statement.append(" from \"");
-        statement.append(persistenceSettings.getKeyspace());
-        statement.append("\".\"%1$s");
-        statement.append("\" where ");
-
-        int i = 0;
-
-        for (String column : keyCols) {
-            if (i > 0)
-                statement.append(" and ");
-
-            statement.append("\"").append(column).append("\"=?");
-            i++;
-        }
-
-        statement.append(";");
-
-        return new String[] {hdrWithKeyFields + statement.toString(), hdr + statement.toString()};
-    }
-
-    /**
-     * @param table Table.
-     * @param template Template.
-     * @param statements Statements.
-     * @return Statement.
-     */
-    private String getStatement(final String table, final String template, final Map<String, String> statements) {
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
-        synchronized (statements) {
-            String st = statements.get(table);
-
-            if (st == null) {
-                st = String.format(template, table);
-                statements.put(table, st);
-            }
-
-            return st;
-        }
-    }
-
-    /**
      * Builds object from Cassandra table row.
      *
      * @param row Cassandra table row.
@@ -385,11 +228,50 @@ public class PersistenceController {
         String col = settings.getColumn();
 
         if (PersistenceStrategy.PRIMITIVE == stg)
-            return PropertyMappingHelper.getCassandraColumnValue(row, col, clazz, null);
+            return buildObjectFromPrimitive(row, clazz, col);
 
         if (PersistenceStrategy.BLOB == stg)
-            return settings.getSerializer().deserialize(row.getBytes(col));
+            return buildObjectFromBlob(row, settings, col);
 
+        return buildPojo(row, settings, clazz);
+    }
+
+    /**
+     * Builds object from Cassandra table row serialized in blob.
+     *
+     * @param row Cassandra table row.
+     * @param settings persistence settings to use.
+     * @param col column.
+     *
+     * @return object.
+     */
+    protected Object buildObjectFromBlob(Row row, PersistenceSettings settings, String col) {
+        return settings.getSerializer().deserialize(row.getBytes(col));
+    }
+
+    /**
+     * Builds object from Cassandra table row serialized in primitive.
+     *
+     * @param row Cassandra table row.
+     * @param clazz of primitive.
+     * @param col column.
+     *
+     * @return object.
+     */
+    protected Object buildObjectFromPrimitive(Row row, Class clazz, String col) {
+        return PropertyMappingHelper.getCassandraColumnValue(row, col, clazz, null);
+    }
+
+    /**
+     * Builds object from Cassandra table row serialized in POJO.
+     *
+     * @param row Cassandra table row.
+     * @param settings persistence settings to use.
+     * @param clazz of POJO.
+     *
+     * @return object.
+     */
+    protected Object buildPojo(Row row, PersistenceSettings settings, Class clazz) {
         List<PojoField> fields = settings.getFields();
 
         Object obj;
