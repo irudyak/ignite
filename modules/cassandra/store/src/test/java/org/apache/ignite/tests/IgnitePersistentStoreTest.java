@@ -423,6 +423,67 @@ public class IgnitePersistentStoreTest {
 
     /** */
     @Test
+    public void binaryObjectsTest() {
+        Ignition.stopAll(true);
+
+        LOGGER.info("Running binary objects write tests");
+
+        Map<PersonId, Person> personMap = TestsHelper.generatePersonIdsPersonsMap();
+
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/pojo/ignite-config-binary-objects.xml")) {
+            IgniteCache<PersonId, Person> personCache5 = ignite.getOrCreateCache(new CacheConfiguration<PersonId, Person>("binary_objects_cache")).withKeepBinary();
+
+            LOGGER.info("Running single operation write tests");
+
+            PersonId id = TestsHelper.generateRandomPersonId();
+            personCache5.put(id, TestsHelper.generateRandomPerson(id.getPersonNumber()));
+
+            LOGGER.info("Single operation write tests passed");
+
+            LOGGER.info("Running bulk operation write tests");
+            personCache5.putAll(personMap);
+            LOGGER.info("Bulk operation write tests passed");
+        }
+
+        LOGGER.info("Binary objects write tests passed");
+
+        Ignition.stopAll(true);
+
+        try (Ignite ignite = Ignition.start("org/apache/ignite/tests/persistence/pojo/ignite-config.xml")) {
+            LOGGER.info("Running binary objects read tests");
+
+            IgniteCache<PersonId, Person> personCache5 = ignite.getOrCreateCache(new CacheConfiguration<PersonId, Person>("cache5")).withKeepBinary();
+
+            LOGGER.info("Running single operation read tests");
+            PersonId id = personMap.keySet().iterator().next();
+
+            Person person = personCache5.get(id);
+            if (!person.equals(personMap.get(id)))
+                throw new RuntimeException("Person value was incorrectly deserialized from Cassandra");
+
+            LOGGER.info("Single operation read tests passed");
+
+            LOGGER.info("Running bulk operation read tests");
+
+            Map<PersonId, Person> persons = personCache5.getAll(personMap.keySet());
+            if (!TestsHelper.checkPersonMapsEqual(persons, personMap, false))
+                throw new RuntimeException("Person values batch was incorrectly deserialized from Cassandra");
+
+            LOGGER.info("Bulk operation read tests passed");
+
+            LOGGER.info("Binary objects read tests passed");
+
+            LOGGER.info("Running binary objects delete tests");
+
+            personCache5.remove(id);
+            personCache5.removeAll(personMap.keySet());
+
+            LOGGER.info("Binary objects delete tests passed");
+        }
+    }
+
+    /** */
+    @Test
     public void pojoStrategyTransactionTest() {
         CassandraHelper.dropTestKeyspaces();
 
