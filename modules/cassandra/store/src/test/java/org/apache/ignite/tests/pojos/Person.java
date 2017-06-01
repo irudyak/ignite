@@ -17,6 +17,11 @@
 
 package org.apache.ignite.tests.pojos;
 
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.binary.BinaryReader;
+import org.apache.ignite.binary.BinaryWriter;
+import org.apache.ignite.binary.Binarylizable;
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -27,7 +32,7 @@ import java.util.List;
 /**
  * Simple POJO which could be stored as a value in Ignite cache
  */
-public class Person implements Externalizable {
+public class Person implements Externalizable, Binarylizable {
     /** */
     private long personNum;
 
@@ -277,5 +282,31 @@ public class Person implements Externalizable {
     @SuppressWarnings("UnusedDeclaration")
     public List<String> getPhones() {
         return phones;
+    }
+
+    @Override
+    public void writeBinary(BinaryWriter writer) throws BinaryObjectException {
+        writer.writeLong("personNum", personNum);
+        writer.writeString("firstName", firstName);
+        writer.writeString("lastName", lastName);
+        writer.writeInt("age", age);
+        writer.writeBoolean("married", married);
+        writer.writeLong("height", height);
+        writer.writeFloat("weight", weight);
+        writer.writeDate("birthDate", birthDate);
+        writer.writeObject("phones", phones);
+    }
+
+    @Override
+    public void readBinary(BinaryReader reader) throws BinaryObjectException {
+        personNum = reader.readLong("personNum");
+        firstName = reader.readString("firstName");
+        lastName = reader.readString("lastName");
+        age = reader.readInt("age");
+        married = reader.readBoolean("married");
+        height = reader.readLong("height");
+        weight = reader.readFloat("weight");
+        birthDate = reader.readDate("birthDate");
+        phones = (List<String>)reader.readObject("phones");
     }
 }
