@@ -202,6 +202,15 @@ public class KeyValuePersistenceSettings implements Serializable {
     }
 
     /**
+     * Flag indicating if key/value POJO fields were automatically discovered based on Java Bean class of the object.
+     *
+     * @return true if fields were automatically discovered and false if not.
+     */
+    public boolean fieldsAutoDiscovery() {
+        return keyPersistenceSettings.fieldsAutoDiscovery() || valPersistenceSettings.fieldsAutoDiscovery();
+    }
+
+    /**
      * Returns list of POJO fields to be mapped to Cassandra table columns.
      *
      * @return POJO fields list.

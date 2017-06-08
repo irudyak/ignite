@@ -34,6 +34,8 @@ import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.tests.pojos.Person;
 import org.apache.ignite.tests.pojos.PersonId;
+import org.apache.ignite.tests.pojos.SimplePerson;
+import org.apache.ignite.tests.pojos.SimplePersonId;
 import org.apache.ignite.tests.pojos.Product;
 import org.apache.ignite.tests.pojos.ProductOrder;
 import org.apache.ignite.tests.utils.CacheStoreHelper;

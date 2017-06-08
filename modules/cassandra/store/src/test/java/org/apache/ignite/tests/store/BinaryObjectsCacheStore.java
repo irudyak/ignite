@@ -1,8 +1,14 @@
 package org.apache.ignite.tests.store;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.store.CacheStore;
+import org.apache.ignite.cache.store.CacheStoreSession;
 import org.apache.ignite.lang.IgniteBiInClosure;
+import org.apache.ignite.resources.CacheStoreSessionResource;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.Nullable;
 
 import javax.cache.Cache;
@@ -17,6 +23,14 @@ import java.util.Map;
  * @param <V> Ignite cache value type
  */
 public class BinaryObjectsCacheStore<K, V> implements CacheStore<K, V> {
+    @SuppressWarnings("unused")
+    @IgniteInstanceResource
+    private Ignite ignite;
+
+    @SuppressWarnings("unused")
+    @CacheStoreSessionResource
+    private CacheStoreSession storeSes;
+
     @Override
     public void loadCache(IgniteBiInClosure<K, V> clo, @Nullable Object... args) throws CacheLoaderException {
     }

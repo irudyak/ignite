@@ -35,6 +35,7 @@ import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriterException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.store.CacheStore;
 import org.apache.ignite.cache.store.CacheStoreSession;
@@ -48,6 +49,7 @@ import org.apache.ignite.cache.store.cassandra.session.LoadCacheCustomQueryWorke
 import org.apache.ignite.cache.store.cassandra.session.transaction.DeleteMutation;
 import org.apache.ignite.cache.store.cassandra.session.transaction.Mutation;
 import org.apache.ignite.cache.store.cassandra.session.transaction.WriteMutation;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -91,6 +93,9 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
     /** Max workers thread count. These threads are responsible for load cache. */
     private int maxPoolSize = Runtime.getRuntime().availableProcessors();
 
+    /** Cache configuration */
+    private volatile  CacheConfiguration cacheConf = null;
+
     /** Controller component responsible for serialization logic. */
     private final PersistenceController controller;
 
@@ -105,6 +110,11 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
         this.dataSrc = dataSrc;
         this.controller = new PersistenceController(settings);
         this.maxPoolSize = maxPoolSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(CassandraCacheStore.class, this);
     }
 
     /** {@inheritDoc} */
@@ -499,6 +509,14 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
      * @return Cassandra session wrapper.
      */
     private CassandraSession getCassandraSession() {
+
+        if (isStoreKeepBinary() && controller.getPersistenceSettings().fieldsAutoDiscovery()) {
+            throw new IgniteException("Cache '" + storeSes.cacheName() + "' is using POJO fields auto discovery and " +
+                    "'storeKeepBinary' options. POJO fields auto discovery is not supported for BinaryObjects. For " +
+                    "BinaryObject you should manually specify object fields to Cassandra columns mapping in the " +
+                    "persistence descriptor.");
+        }
+
         return dataSrc.session(log != null ? log : new NullLogger());
     }
 
@@ -539,8 +557,16 @@ public class CassandraCacheStore<K, V> implements CacheStore<K, V> {
         return (List<Mutation>)storeSes.properties().get(TRANSACTION_BUFFER);
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(CassandraCacheStore.class, this);
+    /**
+     * Flag indicating that {@link CacheStore} implementation
+     * is working with binary objects instead of Java objects.
+     *
+     * @return Keep binary in store flag.
+     */
+    private boolean isStoreKeepBinary() {
+        if (cacheConf == null)
+            cacheConf = ignite.getOrCreateCache(storeSes.cacheName()).getConfiguration(CacheConfiguration.class);
+
+        return cacheConf.isStoreKeepBinary();
     }
 }

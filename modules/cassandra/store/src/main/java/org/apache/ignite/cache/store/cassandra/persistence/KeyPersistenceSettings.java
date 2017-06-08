@@ -46,6 +46,9 @@ public class KeyPersistenceSettings extends PersistenceSettings {
     /** Cluster key fields. */
     private List<PojoField> clusterKeyFields = new LinkedList<>();
 
+    /** Flag indicating if POJO fields were automatically discovered based on Java Bean class of the object. */
+    private boolean fieldsAutoDiscovery = false;
+
     /**
      * Creates key persistence settings object based on it's XML configuration.
      *
@@ -122,16 +125,6 @@ public class KeyPersistenceSettings extends PersistenceSettings {
         return fields;
     }
 
-    /** {@inheritDoc} */
-    @Override protected PojoField createPojoField(Element el, Class clazz) {
-        return new PojoKeyField(el, clazz);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected PojoField createPojoField(PojoFieldAccessor accessor) {
-        return new PojoKeyField(accessor);
-    }
-
     /**
      * Returns Cassandra DDL for primary key.
      *
@@ -188,6 +181,25 @@ public class KeyPersistenceSettings extends PersistenceSettings {
         }
 
         return builder.length() == 0 ? null : "clustering order by (" + builder + ")";
+    }
+
+    /**
+     * Flag indicating if POJO fields were automatically discovered based on Java Bean class of the object.
+     *
+     * @return true if fields were automatically discovered and false if not.
+     */
+    public boolean fieldsAutoDiscovery() {
+        return fieldsAutoDiscovery;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected PojoField createPojoField(Element el, Class clazz) {
+        return new PojoKeyField(el, clazz);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected PojoField createPojoField(PojoFieldAccessor accessor) {
+        return new PojoKeyField(accessor);
     }
 
     /** {@inheritDoc} */

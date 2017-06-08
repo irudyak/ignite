@@ -34,6 +34,9 @@ public class ValuePersistenceSettings extends PersistenceSettings {
     /** Value fields. */
     private List<PojoField> fields = new LinkedList<>();
 
+    /** Flag indicating if POJO fields were automatically discovered based on Java Bean class of the object. */
+    private boolean fieldsAutoDiscovery = false;
+
     /**
      * Creates class instance from XML configuration.
      *
@@ -65,6 +68,15 @@ public class ValuePersistenceSettings extends PersistenceSettings {
      */
     @Override public List<PojoField> getFields() {
         return fields == null ? null : Collections.unmodifiableList(fields);
+    }
+
+    /**
+     * Flag indicating if POJO fields were automatically discovered based on Java Bean class of the object.
+     *
+     * @return true if fields were automatically discovered and false if not.
+     */
+    public boolean fieldsAutoDiscovery() {
+        return fieldsAutoDiscovery;
     }
 
     /** {@inheritDoc} */
